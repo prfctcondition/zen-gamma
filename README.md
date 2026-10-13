@@ -14,7 +14,7 @@
 
   <p>
     <em>The definitive hardware-calibrated color, gamma curve response, and digital vibrance utility for competitive tactical shooters.</em><br />
-    <small>Engineered in pure native Rust with Win32 GDI ramp manipulation, AMD ADL / DWM saturation pipelines, active-tab hotkey isolation, and instant emergency rollback.</small>
+    <small>Engineered in pure native Rust with Win32 GDI ramp manipulation, AMD ADL / NVIDIA DVC driver registers, active-tab hotkey isolation, and instant emergency rollback.</small>
   </p>
 
   <p>
@@ -22,7 +22,7 @@
     <img src="https://img.shields.io/badge/Platform-Windows%2010%20%7C%2011%20(x64)-1B2C54?style=flat-square&logo=windows&logoColor=white" alt="Platform" />
     <img src="https://img.shields.io/badge/Rust-2021_Edition-000000?style=flat-square&logo=rust&logoColor=white" alt="Rust" />
     <img src="https://img.shields.io/badge/GUI-Slint_1.8_%7C_FemtoVG-1E293B?style=flat-square" alt="Slint GUI" />
-    <img src="https://img.shields.io/badge/Display_API-Win32_GDI_%7C_ADL_%7C_DWM-0F766E?style=flat-square" alt="Display API" />
+    <img src="https://img.shields.io/badge/Display_API-Win32_GDI_%7C_ADL_%7C_NVAPI-0F766E?style=flat-square" alt="Display API" />
     <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-10B981.svg?style=flat-square" alt="License" /></a>
   </p>
 
@@ -53,7 +53,7 @@ Most players attempt to solve visibility issues through flawed workarounds:
 Instead of intercepting game memory or hooking graphics APIs, **Zen Gamma communicates directly with the Windows kernel display subsystem**:
 - Manipulates the hardware display controller's 256-entry 16-bit Look-Up Table (LUT) via Win32 GDI `SetDeviceGammaRamp`.
 - Interfaces with the AMD ADL SDK (`ADL_Display_Color_Set`) and NVIDIA driver vibrance registers for hardware-accelerated saturation boost.
-- Integrates DWM color matrix transforms for unified desktop and borderless windowed color enhancement.
+- Zero DWM desktop hooks, fully preserving Hardware Independent Flip, MPO, and G-Sync/FreeSync in all 3D games.
 
 **Zero DLL injection. Zero process memory access. 100% anti-cheat safe. Zero frame rate overhead.**
 
@@ -61,10 +61,10 @@ Instead of intercepting game memory or hooking graphics APIs, **Zen Gamma commun
 
 ## ✧ Features & Architecture
 
-### ▸ 01. Tri-Layer Display Calibration Pipeline
-- **Win32 GDI Hardware LUT Ramp**: Generates high-precision `256 x 3` 16-bit gamma ramps with mathematical black-level lift (`Brightness`), dynamic range expansion (`Contrast`), and non-linear power-curve gamma correction.
+### ▸ 01. Dual-Layer Hardware Display Calibration Pipeline
+- **Win32 GDI Hardware LUT Ramp**: Generates high-precision `256 x 3` 16-bit gamma ramps with mathematical black-level lift (`Brightness`), dynamic range expansion (`Contrast`), non-linear power-curve gamma correction, and an exponential shadow toe-expander algorithm.
 - **Independent Per-Channel RGB Split**: Fine-tune Red, Green, and Blue gamma response curves independently. Counteract green NVG phosphor bloom in Tarkov, illuminate pitch-black foliage in DayZ, or isolate shadow silhouettes in Hunt: Showdown.
-- **Universal Saturation & Digital Vibrance**: Combines AMD ADL driver-level saturation with Windows Desktop Window Manager (DWM) color matrix transformation for instant, vibrant target acquisition.
+- **Hardware GPU Driver Saturation**: Communicates directly with AMD ADL (`atiadlxx.dll`) and NVIDIA NVAPI (`nvapi64.dll`) driver registers for zero-overhead, vibrant target acquisition without touching DWM composition.
 
 ### ▸ 02. Active-Tab Isolated Global Hotkey Engine
 - **Per-Game Hotkey Scoping**: Global hotkeys (`Ctrl+F1` through `Ctrl+F7`) are dynamically scoped to the currently active game profile.
@@ -117,7 +117,7 @@ Every display panel, room lighting environment, and player preference is differe
   - **Black Level Lift (Brightness)**: Elevate compressed shadow tones without washing out midtones or blowing out highlights.
   - **Dynamic Range (Contrast)**: Sharpen silhouette edges and separate camouflaged player models from dense background foliage.
   - **Independent RGB Gamma Split**: Fine-tune Red, Green, and Blue gamma response curves discretely to counteract game-specific color tinting (e.g. heavy green hues or tinted night shaders).
-  - **Digital Vibrance & Color Saturation**: Boost saturation up to **200%** via hardware DWM and driver pipelines for instantaneous peripheral target acquisition.
+  - **Digital Vibrance & Color Saturation**: Boost saturation up to **200%** via native AMD ADL and NVIDIA driver registers for instantaneous peripheral target acquisition.
 - **Fluid Drag & Drop Management**: Organize and prioritize games and presets effortlessly using smooth, zero-jitter drag-and-drop reordering.
 
 ---
@@ -177,7 +177,7 @@ cargo build --release
 
 - [x] **Direct Hardware GDI LUT Calibration**: 256-entry 16-bit gamma ramp synthesis with brightness lift and contrast scaling.
 - [x] **Independent Per-Channel RGB Curve Split**: Discrete Red, Green, and Blue gamma response curves.
-- [x] **AMD ADL & DWM Saturation Pipeline**: Digital vibrance and color matrix enhancement without game hooks.
+- [x] **Native GPU Driver Saturation Pipeline**: Digital vibrance via AMD ADL & NVIDIA NVAPI registers with zero DWM compositor overhead.
 - [x] **Active-Tab Isolated Hotkey Engine**: Game-scoped hotkeys with zero multi-game key collisions.
 - [x] **1-Click Hardware Emergency Reset (`Ctrl+Shift+R`)**: Instant identity ramp restore with customizable hotkey.
 - [x] **Offline Game Catalog & Multi-Res Icon Pack**: 139 high-definition 256x256 icons embedded directly into the binary.

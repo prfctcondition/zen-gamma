@@ -12,10 +12,7 @@ use windows::{
             Console::{SetConsoleCtrlHandler, CTRL_CLOSE_EVENT, CTRL_C_EVENT, CTRL_SHUTDOWN_EVENT},
             LibraryLoader::{GetProcAddress, LoadLibraryA},
         },
-        UI::{
-            ColorSystem::{GetDeviceGammaRamp, SetDeviceGammaRamp},
-            Magnification::{MagInitialize, MagSetFullscreenColorEffect, MAGCOLOREFFECT},
-        },
+        UI::ColorSystem::{GetDeviceGammaRamp, SetDeviceGammaRamp},
     },
 };
 
@@ -46,87 +43,40 @@ impl Default for GammaRamp {
 /// Identifies which Saturation / Digital Vibrance backend is active on the current machine.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum VibranceBackend {
-    /// NVIDIA Driver-level Digital Vibrance Control + DWM Matrix
+    /// NVIDIA Driver-level Digital Vibrance Control (NVAPI)
     NvidiaDvc,
-    /// AMD Display Library (`atiadlxx.dll`) + DWM Color Matrix
+    /// AMD Display Library (ADL) Driver Saturation
     AmdAdl,
-    /// Windows Hardware DWM 5x5 Color Matrix (`Magnification.dll`) + GDI LUT
-    DwmColorMatrix,
+    /// Native Win32 GDI Hardware LUT Chroma Curve
+    HardwareLut,
 }
 
 impl VibranceBackend {
     pub fn status_description(self) -> &'static str {
         match self {
-            VibranceBackend::NvidiaDvc => "GDI + NVIDIA DVC",
-            VibranceBackend::AmdAdl => "GDI + AMD ADL + DWM Saturation",
-            VibranceBackend::DwmColorMatrix => "GDI + DWM Matrix Saturation",
+            VibranceBackend::NvidiaDvc => "GDI Hardware LUT + NVIDIA DVC",
+            VibranceBackend::AmdAdl => "GDI Hardware LUT + AMD ADL Driver",
+            VibranceBackend::HardwareLut => "GDI Hardware LUT + Chroma Curve",
         }
     }
 }
 
-/// Applies a hardware-accelerated 5x5 RGB Color & Shadow-Gain Matrix via Windows `Magnification.dll` (`MagSetFullscreenColorEffect`).
-/// Combines Rec.709 Digital Vibrance / Saturation with pre-LUT hardware exposure amplification for extreme night-vision presets.
+/// Dynamically uninitializes any residual Windows Magnification API state left by prior runs
+/// to guarantee Windows DWM restores 100% unconstrained Hardware DirectFlip / MPO.
 #[cfg(windows)]
-pub fn apply_dwm_color_matrix(values: &DisplayValues) {
-    static MAG_INIT: OnceLock<bool> = OnceLock::new();
-    let initialized = *MAG_INIT.get_or_init(|| unsafe { MagInitialize().as_bool() });
-    if !initialized {
-        return;
-    }
-
-    let s = (values.saturation / 100.0).clamp(0.0, 2.5);
-
-    // Pre-LUT hardware exposure & shadow floor boost for extreme night-vision presets:
-    // Because Windows GDI SetDeviceGammaRamp is kernel-clamped to `i * 256 + 32512`, pitch-black pixels
-    // (`RGB 1..5`) have limited slope in the LUT alone. By amplifying dark framebuffer values in the DWM
-    // 5x5 GPU shader *before* the hardware LUT, even `RGB(1, 1, 1)` zero-light shadows are blown wide open.
-    let avg_gamma = if values.rgb_split {
-        (values.gamma_r + values.gamma_g + values.gamma_b) / 3.0
-    } else {
-        values.gamma
-    };
-    let gamma_excess = ((avg_gamma - 1.85).max(0.0) / 1.15).clamp(0.0, 1.0);
-    let bright_excess = ((values.brightness - 12.0).max(0.0) / 38.0).clamp(0.0, 1.0);
-    let contrast_excess = ((values.contrast - 55.0).max(0.0) / 45.0).clamp(0.0, 1.0);
-    let night_overdrive = gamma_excess * bright_excess;
-
-    // Scales up to ~4.6x hardware pre-LUT gain on Ultra Extreme settings (gamma=3.0, brightness=50, contrast=92+)
-    let gain = 1.0 + night_overdrive * (1.85 + contrast_excess * 1.75);
-    let lift = night_overdrive * (0.045 + bright_excess * 0.055);
-
-    // Per-channel tint multiplier when RGB split is active in night mode
-    let r_gain = gain * if values.rgb_split { (values.gamma_r / avg_gamma.max(0.5)).clamp(0.85, 1.15) } else { 1.0 };
-    let g_gain = gain * if values.rgb_split { (values.gamma_g / avg_gamma.max(0.5)).clamp(0.85, 1.15) } else { 1.0 };
-    let b_gain = gain * if values.rgb_split { (values.gamma_b / avg_gamma.max(0.5)).clamp(0.85, 1.15) } else { 1.0 };
-
-    // Rec.709 luma coefficients preserving neutral gray balance
-    let wr = (1.0 - s) * 0.2126;
-    let wg = (1.0 - s) * 0.7152;
-    let wb = (1.0 - s) * 0.0722;
-
-    let mut effect = MAGCOLOREFFECT {
-        transform: [
-            (wr + s) * r_gain, wr * g_gain,       wr * b_gain,       0.0, 0.0,
-            wg * r_gain,       (wg + s) * g_gain, wg * b_gain,       0.0, 0.0,
-            wb * r_gain,       wb * g_gain,       (wb + s) * b_gain, 0.0, 0.0,
-            0.0,               0.0,               0.0,               1.0, 0.0,
-            lift,              lift,              lift,              0.0, 1.0,
-        ],
-    };
-
+pub fn cleanup_legacy_magnification() {
     unsafe {
-        let _ = MagSetFullscreenColorEffect(&mut effect);
+        if let Ok(hmod) = LoadLibraryA(s!("Magnification.dll")) {
+            if let Some(uninit_addr) = GetProcAddress(hmod, s!("MagUninitialize")) {
+                let mag_uninit: unsafe extern "system" fn() -> BOOL = std::mem::transmute(uninit_addr);
+                let _ = mag_uninit();
+            }
+        }
     }
 }
 
 #[cfg(not(windows))]
-pub fn apply_dwm_color_matrix(_values: &DisplayValues) {}
-
-pub fn apply_dwm_saturation_matrix(saturation_pct: f32) {
-    let mut v = DisplayValues::default();
-    v.saturation = saturation_pct;
-    apply_dwm_color_matrix(&v);
-}
+pub fn cleanup_legacy_magnification() {}
 
 /// Dynamically resolved NVIDIA NVAPI Digital Vibrance Control FFI table.
 struct NvApiDvcDriver {
@@ -531,9 +481,8 @@ pub fn read_hardware_ramp() -> GammaRamp {
     GammaRamp::default()
 }
 
-/// Immediately restores the original hardware gamma ramp and neutral DWM saturation matrix.
+/// Immediately restores the original hardware gamma ramp.
 pub fn emergency_restore_display() {
-    apply_dwm_color_matrix(&DisplayValues::default());
     if let Some(lock) = EMERGENCY_RESTORE_RAMP.get() {
         if let Ok(original_ramp) = lock.lock() {
             let _ = apply_hardware_ramp(&original_ramp);
@@ -566,7 +515,7 @@ pub fn install_panic_and_exit_hooks(original_ramp: GammaRamp) {
     }
 }
 
-/// High-level Display Controller managing GDI Gamma Ramps, Driver Digital Vibrance, DWM Saturation Matrix, and RAII cleanup.
+/// High-level Display Controller managing GDI Gamma Ramps, Driver Digital Vibrance, and RAII cleanup.
 /// Uses a dedicated coalescing background worker thread so slider drags never block the GUI thread.
 #[derive(Clone, Copy)]
 enum WorkerJob {
@@ -591,6 +540,7 @@ pub struct DisplayController {
 
 impl DisplayController {
     pub fn new() -> Self {
+        cleanup_legacy_magnification();
         let original_ramp = read_hardware_ramp();
         install_panic_and_exit_hooks(original_ramp);
 
@@ -606,7 +556,7 @@ impl DisplayController {
         } else if amd_driver.is_some() {
             VibranceBackend::AmdAdl
         } else {
-            VibranceBackend::DwmColorMatrix
+            VibranceBackend::HardwareLut
         };
 
         let use_lut_fallback = nvapi_driver.is_none();
@@ -641,7 +591,6 @@ impl DisplayController {
                         WorkerJob::Apply(values) => {
                             let ramp = calculate_gamma_ramp(&values, use_lut_fallback);
                             let _ = apply_hardware_ramp(&ramp);
-                            apply_dwm_color_matrix(&values);
 
                             if (values.saturation - last_saturation).abs() > 0.05 {
                                 last_saturation = values.saturation;
@@ -654,7 +603,6 @@ impl DisplayController {
                         }
                         WorkerJob::Reset => {
                             let _ = apply_hardware_ramp(&original_ramp);
-                            apply_dwm_color_matrix(&DisplayValues::default());
                             if (last_saturation - 100.0).abs() > 0.05 {
                                 last_saturation = 100.0;
                                 if let Some(ref nvapi) = nvapi_driver {
@@ -667,7 +615,6 @@ impl DisplayController {
                         }
                         WorkerJob::Shutdown => {
                             let _ = apply_hardware_ramp(&original_ramp);
-                            apply_dwm_color_matrix(&DisplayValues::default());
                             if let Some(ref nvapi) = nvapi_driver {
                                 nvapi.restore_default();
                             }
