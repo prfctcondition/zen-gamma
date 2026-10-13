@@ -78,12 +78,18 @@ pub fn cleanup_legacy_magnification() {
 #[cfg(not(windows))]
 pub fn cleanup_legacy_magnification() {}
 
-/// Dynamically resolved NVIDIA NVAPI Digital Vibrance Control FFI table.
-struct NvApiDvcDriver {
-    display_handle: isize,
+#[derive(Debug, Clone, Copy)]
+struct NvDisplayTarget {
+    handle: isize,
     default_level: i32,
     min_level: i32,
     max_level: i32,
+}
+
+/// Dynamically resolved NVIDIA NVAPI Digital Vibrance Control FFI table.
+/// Tracks all active NVIDIA display handles so multi-output GPUs update reliably.
+struct NvApiDvcDriver {
+    targets: Vec<NvDisplayTarget>,
     set_dvc_level_ex: unsafe extern "C" fn(isize, u32, *const NvDisplayDvcInfoEx) -> i32,
 }
 
@@ -135,28 +141,35 @@ impl NvApiDvcDriver {
             }
 
             let nv_enum_disp: EnumDisplayHandleFn = std::mem::transmute(enum_ptr);
-            let mut disp_handle: isize = 0;
-            if nv_enum_disp(0, &mut disp_handle) != 0 || disp_handle == 0 {
-                return None;
-            }
-
             let nv_get_dvc: GetDvcInfoExFn = std::mem::transmute(get_dvc_ptr);
             let nv_set_dvc: SetDvcLevelExFn = std::mem::transmute(set_dvc_ptr);
 
-            let mut info = NvDisplayDvcInfoEx {
-                version: (std::mem::size_of::<NvDisplayDvcInfoEx>() as u32) | (1 << 16),
-                ..Default::default()
-            };
+            let mut targets = Vec::new();
+            for disp_idx in 0..8 {
+                let mut disp_handle: isize = 0;
+                if nv_enum_disp(disp_idx, &mut disp_handle) == 0 && disp_handle != 0 {
+                    let mut info = NvDisplayDvcInfoEx {
+                        version: (std::mem::size_of::<NvDisplayDvcInfoEx>() as u32) | (1 << 16),
+                        ..Default::default()
+                    };
 
-            if nv_get_dvc(disp_handle, 0, &mut info) != 0 {
+                    if nv_get_dvc(disp_handle, 0, &mut info) == 0 && info.max_level > info.min_level {
+                        targets.push(NvDisplayTarget {
+                            handle: disp_handle,
+                            default_level: info.current_level,
+                            min_level: info.min_level,
+                            max_level: info.max_level.max(1),
+                        });
+                    }
+                }
+            }
+
+            if targets.is_empty() {
                 return None;
             }
 
             Some(Self {
-                display_handle: disp_handle,
-                default_level: info.current_level,
-                min_level: info.min_level,
-                max_level: info.max_level.max(1),
+                targets,
                 set_dvc_level_ex: nv_set_dvc,
             })
         }
@@ -167,41 +180,46 @@ impl NvApiDvcDriver {
         None
     }
 
-    /// Maps `saturation_pct` (`0.0..=200.0`, where `100.0` = neutral) to NVIDIA DVC.
+    /// Maps `saturation_pct` (`0.0..=200.0`, where `100.0` = neutral) to NVIDIA DVC across all active outputs.
     fn set_saturation(&self, saturation_pct: f32) {
         let clamped = saturation_pct.clamp(0.0, 200.0);
-        let target_level = if clamped >= 100.0 {
-            let t = (clamped - 100.0) / 100.0;
-            self.default_level
-                + ((self.max_level - self.default_level) as f32 * t).round() as i32
-        } else {
-            let t = clamped / 100.0;
-            self.min_level + ((self.default_level - self.min_level) as f32 * t).round() as i32
-        };
 
-        let info = NvDisplayDvcInfoEx {
-            version: (std::mem::size_of::<NvDisplayDvcInfoEx>() as u32) | (1 << 16),
-            current_level: target_level.clamp(self.min_level, self.max_level),
-            min_level: self.min_level,
-            max_level: self.max_level,
-            default_level: self.default_level,
-        };
+        for target in &self.targets {
+            let target_level = if clamped >= 100.0 {
+                let t = (clamped - 100.0) / 100.0;
+                target.default_level
+                    + ((target.max_level - target.default_level) as f32 * t).round() as i32
+            } else {
+                let t = clamped / 100.0;
+                target.min_level + ((target.default_level - target.min_level) as f32 * t).round() as i32
+            };
 
-        unsafe {
-            let _ = (self.set_dvc_level_ex)(self.display_handle, 0, &info);
+            let info = NvDisplayDvcInfoEx {
+                version: (std::mem::size_of::<NvDisplayDvcInfoEx>() as u32) | (1 << 16),
+                current_level: target_level.clamp(target.min_level, target.max_level),
+                min_level: target.min_level,
+                max_level: target.max_level,
+                default_level: target.default_level,
+            };
+
+            unsafe {
+                let _ = (self.set_dvc_level_ex)(target.handle, 0, &info);
+            }
         }
     }
 
     fn restore_default(&self) {
-        let info = NvDisplayDvcInfoEx {
-            version: (std::mem::size_of::<NvDisplayDvcInfoEx>() as u32) | (1 << 16),
-            current_level: self.default_level,
-            min_level: self.min_level,
-            max_level: self.max_level,
-            default_level: self.default_level,
-        };
-        unsafe {
-            let _ = (self.set_dvc_level_ex)(self.display_handle, 0, &info);
+        for target in &self.targets {
+            let info = NvDisplayDvcInfoEx {
+                version: (std::mem::size_of::<NvDisplayDvcInfoEx>() as u32) | (1 << 16),
+                current_level: target.default_level,
+                min_level: target.min_level,
+                max_level: target.max_level,
+                default_level: target.default_level,
+            };
+            unsafe {
+                let _ = (self.set_dvc_level_ex)(target.handle, 0, &info);
+            }
         }
     }
 }
@@ -553,7 +571,7 @@ impl DisplayController {
             VibranceBackend::HardwareLut
         };
 
-        let use_lut_fallback = nvapi_driver.is_none();
+        let use_lut_fallback = nvapi_driver.is_none() && amd_driver.is_none();
         let worker_state = std::sync::Arc::new((
             Mutex::new(WorkerSlot { pending: None }),
             std::sync::Condvar::new(),
