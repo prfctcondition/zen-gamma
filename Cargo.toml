@@ -1,0 +1,69 @@
+[package]
+name = "zen-gamma"
+version = "0.2.0"
+edition = "2021"
+default-run = "zen-gamma"
+description = "Ultra-low-overhead Windows display profile & hardware gamma calibration engine for tactical shooters"
+authors = ["prfctCondition <https://github.com/prfctcondition>"]
+license = "MIT"
+repository = "https://github.com/prfctcondition/zen-gamma"
+readme = "README.md"
+
+[[bin]]
+name = "zen-gamma"
+path = "src/main.rs"
+
+[[bin]]
+name = "zen-gamma-setup"
+path = "src/bin/installer.rs"
+
+[dependencies]
+# Slint GUI with Winit + FemtoVG (OpenGL/Direct3D lightweight vector renderer)
+slint = { version = "1.8", default-features = false, features = [
+    "std",
+    "compat-1-2",
+    "backend-winit",
+    "renderer-femtovg",
+    "renderer-software",
+] }
+
+# Serialization & Configuration
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+dirs = "5.0"
+
+# Native .ico and .png decoding for bundled game icons
+image = { version = "0.25", default-features = false, features = ["ico", "png"] }
+
+# System Tray & Global Hotkey support
+tray-icon = "0.19"
+global-hotkey = "0.6"
+
+# Direct Windows API bindings (GDI Gamma Ramps, DWM Magnification, Registry, Dynamic FFI, Win32 Messaging)
+[target.'cfg(windows)'.dependencies.windows]
+version = "0.58"
+features = [
+    "Win32_Foundation",
+    "Win32_Graphics_Gdi",
+    "Win32_UI_ColorSystem",
+    "Win32_UI_Magnification",
+    "Win32_Devices_Display",
+    "Win32_System_Console",
+    "Win32_System_LibraryLoader",
+    "Win32_System_Registry",
+    "Win32_System_Threading",
+    "Win32_UI_Input_KeyboardAndMouse",
+    "Win32_UI_WindowsAndMessaging",
+    "Win32_UI_Shell",
+]
+
+[build-dependencies]
+slint-build = "1.8"
+winres = "0.1"
+
+[profile.release]
+opt-level = "z"       # Optimize for binary size & low memory footprint
+lto = "fat"           # Full link-time optimization
+codegen-units = 1     # Maximum optimization across crates
+panic = "unwind"      # Keep unwind enabled so Drop guards restore hardware gamma on panic
+strip = "symbols"     # Strip debug symbols for minimal binary size

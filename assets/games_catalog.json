@@ -1,0 +1,697 @@
+[
+  {
+    "title": "Hunt: Showdown 1896",
+    "icon": "hunt_showdown_594650.ico",
+    "appid": 594650
+  },
+  {
+    "title": "Arma 3",
+    "icon": "arma_3_107410.ico",
+    "appid": 107410
+  },
+  {
+    "title": "Arma Reforger",
+    "icon": "arma_reforger_1874880.ico",
+    "appid": 1874880
+  },
+  {
+    "title": "DayZ",
+    "icon": "dayz_221100.ico",
+    "appid": 221100
+  },
+  {
+    "title": "Escape from Tarkov",
+    "icon": "escape_from_tarkov.ico",
+    "appid": 3932890
+  },
+  {
+    "title": "Counter-Strike 2",
+    "icon": "cs2_730.ico",
+    "appid": 730
+  },
+  {
+    "title": "7 Days to Die",
+    "icon": "7_days_to_die_251570.ico",
+    "appid": 251570
+  },
+  {
+    "title": "Age of Empires II: Definitive Edition",
+    "icon": "aoe2_de_813780.ico",
+    "appid": 813780
+  },
+  {
+    "title": "Age of Empires IV",
+    "icon": "aoe4_1466860.ico",
+    "appid": 1466860
+  },
+  {
+    "title": "Apex Legends",
+    "icon": "apex_legends_1172470.ico",
+    "appid": 1172470
+  },
+  {
+    "title": "Arena Breakout: Infinite",
+    "icon": "arena_breakout_2073620.ico",
+    "appid": 2073620
+  },
+  {
+    "title": "ARK: Survival Ascended",
+    "icon": "ark_ascended_2399830.ico",
+    "appid": 2399830
+  },
+  {
+    "title": "ARK: Survival Evolved",
+    "icon": "ark_survival_346110.ico",
+    "appid": 346110
+  },
+  {
+    "title": "Assetto Corsa",
+    "icon": "assetto_corsa_244210.ico",
+    "appid": 244210
+  },
+  {
+    "title": "Balatro",
+    "icon": "balatro_2379780.ico",
+    "appid": 2379780
+  },
+  {
+    "title": "Baldur's Gate 3",
+    "icon": "baldurs_gate_3_1086940.ico",
+    "appid": 1086940
+  },
+  {
+    "title": "BattleBit Remastered",
+    "icon": "battlebit_671860.ico",
+    "appid": 671860
+  },
+  {
+    "title": "Battlefield 1",
+    "icon": "battlefield_1_1238840.ico",
+    "appid": 1238840
+  },
+  {
+    "title": "Battlefield 2042",
+    "icon": "battlefield_2042_1517290.ico",
+    "appid": 1517290
+  },
+  {
+    "title": "Battlefield 4",
+    "icon": "battlefield_4_1238860.ico",
+    "appid": 1238860
+  },
+  {
+    "title": "Battlefield V",
+    "icon": "battlefield_v_1238810.ico",
+    "appid": 1238810
+  },
+  {
+    "title": "BeamNG.drive",
+    "icon": "beamng_284160.ico",
+    "appid": 284160
+  },
+  {
+    "title": "Black Myth: Wukong",
+    "icon": "black_myth_wukong_2358720.ico",
+    "appid": 2358720
+  },
+  {
+    "title": "Caliber",
+    "icon": "caliber.ico",
+    "appid": 0
+  },
+  {
+    "title": "Call of Duty: Warzone / BO6",
+    "icon": "call_of_duty_1938090.ico",
+    "appid": 1938090
+  },
+  {
+    "title": "Celeste",
+    "icon": "celeste_504230.ico",
+    "appid": 504230
+  },
+  {
+    "title": "Clair Obscur: Expedition 33",
+    "icon": "expedition_33_1903340.ico",
+    "appid": 1903340
+  },
+  {
+    "title": "Conan Exiles",
+    "icon": "conan_exiles_440900.ico",
+    "appid": 440900
+  },
+  {
+    "title": "Cyberpunk 2077",
+    "icon": "cyberpunk_2077_1091500.ico",
+    "appid": 1091500
+  },
+  {
+    "title": "Dark and Darker",
+    "icon": "dark_and_darker_2016590.ico",
+    "appid": 2016590
+  },
+  {
+    "title": "DARK SOULS III",
+    "icon": "dark_souls_3_374320.ico",
+    "appid": 374320
+  },
+  {
+    "title": "Dead by Daylight",
+    "icon": "dead_by_daylight_381210.ico",
+    "appid": 381210
+  },
+  {
+    "title": "Deadlock",
+    "icon": "deadlock_1422450.ico",
+    "appid": 1422450
+  },
+  {
+    "title": "Deep Rock Galactic",
+    "icon": "deep_rock_galactic_548430.ico",
+    "appid": 548430
+  },
+  {
+    "title": "Delta Force",
+    "icon": "delta_force_2507950.ico",
+    "appid": 2507950
+  },
+  {
+    "title": "Destiny 2",
+    "icon": "destiny_2_1085660.ico",
+    "appid": 1085660
+  },
+  {
+    "title": "Devil May Cry 5",
+    "icon": "dmc5_601150.ico",
+    "appid": 601150
+  },
+  {
+    "title": "Diablo IV",
+    "icon": "diablo_4_2344520.ico",
+    "appid": 2344520
+  },
+  {
+    "title": "Don't Starve Together",
+    "icon": "dont_starve_together_322330.ico",
+    "appid": 322330
+  },
+  {
+    "title": "DOOM Eternal",
+    "icon": "doom_eternal_782330.ico",
+    "appid": 782330
+  },
+  {
+    "title": "Dota 2",
+    "icon": "dota_2_570.ico",
+    "appid": 570
+  },
+  {
+    "title": "Dying Light",
+    "icon": "dying_light_239140.ico",
+    "appid": 239140
+  },
+  {
+    "title": "Dying Light 2 Stay Human",
+    "icon": "dying_light_2_534380.ico",
+    "appid": 534380
+  },
+  {
+    "title": "Dyson Sphere Program",
+    "icon": "dyson_sphere_1366540.ico",
+    "appid": 1366540
+  },
+  {
+    "title": "ELDEN RING",
+    "icon": "elden_ring_1245620.ico",
+    "appid": 1245620
+  },
+  {
+    "title": "Enlisted",
+    "icon": "enlisted.ico",
+    "appid": 0
+  },
+  {
+    "title": "Enshrouded",
+    "icon": "enshrouded_1203620.ico",
+    "appid": 1203620
+  },
+  {
+    "title": "Euro Truck Simulator 2",
+    "icon": "ets2_227300.ico",
+    "appid": 227300
+  },
+  {
+    "title": "Factorio",
+    "icon": "factorio_427520.ico",
+    "appid": 427520
+  },
+  {
+    "title": "Fallout 4",
+    "icon": "fallout_4_377160.ico",
+    "appid": 377160
+  },
+  {
+    "title": "Fallout: New Vegas",
+    "icon": "fallout_nv_22380.ico",
+    "appid": 22380
+  },
+  {
+    "title": "Far Cry 3",
+    "icon": "far_cry_3_220240.ico",
+    "appid": 220240
+  },
+  {
+    "title": "Far Cry 5",
+    "icon": "far_cry_5_552520.ico",
+    "appid": 552520
+  },
+  {
+    "title": "FINAL FANTASY XIV Online",
+    "icon": "ffxiv_39210.ico",
+    "appid": 39210
+  },
+  {
+    "title": "Fortnite",
+    "icon": "fortnite.ico",
+    "appid": 0
+  },
+  {
+    "title": "Forza Horizon 5",
+    "icon": "forza_horizon_5_1551360.ico",
+    "appid": 1551360
+  },
+  {
+    "title": "Foxhole",
+    "icon": "foxhole_505460.ico",
+    "appid": 505460
+  },
+  {
+    "title": "Garry's Mod",
+    "icon": "garrys_mod_4000.ico",
+    "appid": 4000
+  },
+  {
+    "title": "God of War",
+    "icon": "god_of_war_1593500.ico",
+    "appid": 1593500
+  },
+  {
+    "title": "Grand Theft Auto V",
+    "icon": "gta_v_271590.ico",
+    "appid": 271590
+  },
+  {
+    "title": "Gray Zone Warfare",
+    "icon": "gray_zone_warfare_2479810.ico",
+    "appid": 2479810
+  },
+  {
+    "title": "Green Hell",
+    "icon": "green_hell_815370.ico",
+    "appid": 815370
+  },
+  {
+    "title": "Guild Wars 2",
+    "icon": "guild_wars_2_1284210.ico",
+    "appid": 1284210
+  },
+  {
+    "title": "Hades",
+    "icon": "hades_1145360.ico",
+    "appid": 1145360
+  },
+  {
+    "title": "Hades II",
+    "icon": "hades_2_1145350.ico",
+    "appid": 1145350
+  },
+  {
+    "title": "Hearts of Iron IV",
+    "icon": "hoi4_394360.ico",
+    "appid": 394360
+  },
+  {
+    "title": "Hell Let Loose",
+    "icon": "hell_let_loose_686810.ico",
+    "appid": 686810
+  },
+  {
+    "title": "HELLDIVERS 2",
+    "icon": "helldivers_2_553850.ico",
+    "appid": 553850
+  },
+  {
+    "title": "Hollow Knight",
+    "icon": "hollow_knight_367520.ico",
+    "appid": 367520
+  },
+  {
+    "title": "Icarus",
+    "icon": "icarus_1149460.ico",
+    "appid": 1149460
+  },
+  {
+    "title": "Insurgency: Sandstorm",
+    "icon": "insurgency_sandstorm_581320.ico",
+    "appid": 581320
+  },
+  {
+    "title": "Kingdom Come: Deliverance",
+    "icon": "kcd_379430.ico",
+    "appid": 379430
+  },
+  {
+    "title": "Kingdom Come: Deliverance II",
+    "icon": "kcd2_1771300.ico",
+    "appid": 1771300
+  },
+  {
+    "title": "League of Legends",
+    "icon": "league_of_legends.ico",
+    "appid": 0
+  },
+  {
+    "title": "Left 4 Dead 2",
+    "icon": "left_4_dead_2_550.ico",
+    "appid": 550
+  },
+  {
+    "title": "Lethal Company",
+    "icon": "lethal_company_1966720.ico",
+    "appid": 1966720
+  },
+  {
+    "title": "Lost Ark",
+    "icon": "lost_ark_1599340.ico",
+    "appid": 1599340
+  },
+  {
+    "title": "Marvel Rivals",
+    "icon": "marvel_rivals_2767030.ico",
+    "appid": 2767030
+  },
+  {
+    "title": "Marvel's Spider-Man Remastered",
+    "icon": "spider_man_1817070.ico",
+    "appid": 1817070
+  },
+  {
+    "title": "Metro 2033 Redux",
+    "icon": "metro_2033_286690.ico",
+    "appid": 286690
+  },
+  {
+    "title": "Metro Exodus",
+    "icon": "metro_exodus_412020.ico",
+    "appid": 412020
+  },
+  {
+    "title": "Metro: Last Light Redux",
+    "icon": "metro_last_light_287390.ico",
+    "appid": 287390
+  },
+  {
+    "title": "Minecraft",
+    "icon": "minecraft.ico",
+    "appid": 0
+  },
+  {
+    "title": "MONSTER HUNTER RISE",
+    "icon": "mh_rise_1446780.ico",
+    "appid": 1446780
+  },
+  {
+    "title": "Monster Hunter: World",
+    "icon": "mhw_582010.ico",
+    "appid": 582010
+  },
+  {
+    "title": "Mount & Blade II: Bannerlord",
+    "icon": "bannerlord_261550.ico",
+    "appid": 261550
+  },
+  {
+    "title": "New World: Aeternum",
+    "icon": "new_world_1063730.ico",
+    "appid": 1063730
+  },
+  {
+    "title": "Once Human",
+    "icon": "once_human_2139460.ico",
+    "appid": 2139460
+  },
+  {
+    "title": "Palworld",
+    "icon": "palworld_1623730.ico",
+    "appid": 1623730
+  },
+  {
+    "title": "Path of Exile",
+    "icon": "path_of_exile_238960.ico",
+    "appid": 238960
+  },
+  {
+    "title": "Path of Exile 2",
+    "icon": "path_of_exile_2_2694490.ico",
+    "appid": 2694490
+  },
+  {
+    "title": "PAYDAY 2",
+    "icon": "payday_2_218620.ico",
+    "appid": 218620
+  },
+  {
+    "title": "PAYDAY 3",
+    "icon": "payday_3_1272080.ico",
+    "appid": 1272080
+  },
+  {
+    "title": "Persona 5 Royal",
+    "icon": "persona_5_1687950.ico",
+    "appid": 1687950
+  },
+  {
+    "title": "Phasmophobia",
+    "icon": "phasmophobia_739630.ico",
+    "appid": 739630
+  },
+  {
+    "title": "Project Zomboid",
+    "icon": "project_zomboid_108600.ico",
+    "appid": 108600
+  },
+  {
+    "title": "PUBG: BATTLEGROUNDS",
+    "icon": "pubg_578080.ico",
+    "appid": 578080
+  },
+  {
+    "title": "Raft",
+    "icon": "raft_648800.ico",
+    "appid": 648800
+  },
+  {
+    "title": "Ready or Not",
+    "icon": "ready_or_not_1144200.ico",
+    "appid": 1144200
+  },
+  {
+    "title": "Red Dead Redemption 2",
+    "icon": "rdr2_1174180.ico",
+    "appid": 1174180
+  },
+  {
+    "title": "Resident Evil 2",
+    "icon": "resident_evil_2_883710.ico",
+    "appid": 883710
+  },
+  {
+    "title": "Resident Evil 4",
+    "icon": "resident_evil_4_2050650.ico",
+    "appid": 2050650
+  },
+  {
+    "title": "Resident Evil Village",
+    "icon": "resident_evil_village_1196590.ico",
+    "appid": 1196590
+  },
+  {
+    "title": "RimWorld",
+    "icon": "rimworld_294100.ico",
+    "appid": 294100
+  },
+  {
+    "title": "Risk of Rain 2",
+    "icon": "risk_of_rain_2_632360.ico",
+    "appid": 632360
+  },
+  {
+    "title": "Rust",
+    "icon": "rust_252490.ico",
+    "appid": 252490
+  },
+  {
+    "title": "S.T.A.L.K.E.R. 2: Heart of Chornobyl",
+    "icon": "stalker_2_1643320.ico",
+    "appid": 1643320
+  },
+  {
+    "title": "Satisfactory",
+    "icon": "satisfactory_526870.ico",
+    "appid": 526870
+  },
+  {
+    "title": "SCUM",
+    "icon": "scum_513710.ico",
+    "appid": 513710
+  },
+  {
+    "title": "Sea of Thieves",
+    "icon": "sea_of_thieves_1172620.ico",
+    "appid": 1172620
+  },
+  {
+    "title": "Sekiro: Shadows Die Twice",
+    "icon": "sekiro_814380.ico",
+    "appid": 814380
+  },
+  {
+    "title": "Sid Meier's Civilization VI",
+    "icon": "civ6_289070.ico",
+    "appid": 289070
+  },
+  {
+    "title": "Sons Of The Forest",
+    "icon": "sons_of_the_forest_1326470.ico",
+    "appid": 1326470
+  },
+  {
+    "title": "Space Engineers",
+    "icon": "space_engineers_244850.ico",
+    "appid": 244850
+  },
+  {
+    "title": "Squad",
+    "icon": "squad_393380.ico",
+    "appid": 393380
+  },
+  {
+    "title": "STALCRAFT: X",
+    "icon": "stalcraft.ico",
+    "appid": 0
+  },
+  {
+    "title": "Stardew Valley",
+    "icon": "stardew_valley_413150.ico",
+    "appid": 413150
+  },
+  {
+    "title": "Subnautica",
+    "icon": "subnautica_264710.ico",
+    "appid": 264710
+  },
+  {
+    "title": "Team Fortress 2",
+    "icon": "tf2_440.ico",
+    "appid": 440
+  },
+  {
+    "title": "Terraria",
+    "icon": "terraria_105600.ico",
+    "appid": 105600
+  },
+  {
+    "title": "The Elder Scrolls Online",
+    "icon": "eso_306130.ico",
+    "appid": 306130
+  },
+  {
+    "title": "The Elder Scrolls V: Skyrim",
+    "icon": "skyrim_489830.ico",
+    "appid": 489830
+  },
+  {
+    "title": "THE FINALS",
+    "icon": "the_finals_2073850.ico",
+    "appid": 2073850
+  },
+  {
+    "title": "The Forest",
+    "icon": "the_forest_242760.ico",
+    "appid": 242760
+  },
+  {
+    "title": "The Sims 4",
+    "icon": "sims_4_1222670.ico",
+    "appid": 1222670
+  },
+  {
+    "title": "The Witcher 3: Wild Hunt",
+    "icon": "witcher_3_292030.ico",
+    "appid": 292030
+  },
+  {
+    "title": "Titanfall 2",
+    "icon": "titanfall_2_1237970.ico",
+    "appid": 1237970
+  },
+  {
+    "title": "Tom Clancy's Rainbow Six Siege",
+    "icon": "r6_siege_359550.ico",
+    "appid": 359550
+  },
+  {
+    "title": "Total War: WARHAMMER II",
+    "icon": "tw_warhammer_2_594570.ico",
+    "appid": 594570
+  },
+  {
+    "title": "Total War: WARHAMMER III",
+    "icon": "tw_warhammer_3_1142710.ico",
+    "appid": 1142710
+  },
+  {
+    "title": "V Rising",
+    "icon": "v_rising_1604030.ico",
+    "appid": 1604030
+  },
+  {
+    "title": "Valheim",
+    "icon": "valheim_892970.ico",
+    "appid": 892970
+  },
+  {
+    "title": "VALORANT",
+    "icon": "valorant.ico",
+    "appid": 0
+  },
+  {
+    "title": "Vampire Survivors",
+    "icon": "vampire_survivors_1794680.ico",
+    "appid": 1794680
+  },
+  {
+    "title": "War Thunder",
+    "icon": "war_thunder_236390.ico",
+    "appid": 236390
+  },
+  {
+    "title": "Warframe",
+    "icon": "warframe_230410.ico",
+    "appid": 230410
+  },
+  {
+    "title": "Warhammer 40,000: Space Marine 2",
+    "icon": "space_marine_2_2183900.ico",
+    "appid": 2183900
+  },
+  {
+    "title": "World of Tanks",
+    "icon": "world_of_tanks.ico",
+    "appid": 0
+  },
+  {
+    "title": "World of Warcraft",
+    "icon": "world_of_warcraft.ico",
+    "appid": 0
+  }
+]

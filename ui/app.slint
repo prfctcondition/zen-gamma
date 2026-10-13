@@ -1,0 +1,2768 @@
+// ZenGamma v0.2 — Minimal Light Tactical Display Controller & Setup UI
+// Designed with Slint (FemtoVG / Native Backend)
+
+export struct GameItem {
+    id: int,
+    name: string,
+    icon: image,
+    icon-file: string,
+    is-builtin: bool,
+}
+
+export struct PresetItem {
+    id: int,
+    name: string,
+    hotkey: string,
+    is-active: bool,
+    is-builtin: bool,
+}
+
+export struct CatalogEntryItem {
+    title: string,
+    icon-file: string,
+    icon: image,
+}
+
+export global Theme {
+    // Base Backgrounds
+    out property <color> bg-main: #F8FAFC;
+    out property <color> bg-sidebar: #F1F5F9;
+
+    // Cards & Containers
+    out property <color> bg-card: #FFFFFF;
+    out property <color> border-subtle: #E2E8F0;
+    out property <color> border-focus: #CBD5E1;
+    out property <color> shadow-soft: rgba(15, 23, 42, 0.05);
+
+    // Typography
+    out property <color> text-primary: #0F172A;
+    out property <color> text-secondary: #334155;
+    out property <color> text-muted: #475569;
+
+    // Accent & Semantic Colors
+    out property <color> accent-navy: #1B2C54;
+    out property <color> accent-navy-hover: #253B6E;
+    out property <color> hover-glass: rgba(0, 0, 0, 0.04);
+    out property <color> active-pill-bg: #E2E8F0;
+    out property <color> status-online: #10B981;
+    out property <color> status-standby: #94A3B8;
+
+    // RGB Channel Accents
+    out property <color> channel-red: #DC2626;
+    out property <color> channel-green: #16A34A;
+    out property <color> channel-blue: #2563EB;
+}
+
+component SurfaceCard inherits Rectangle {
+    background: Theme.bg-card;
+    border-color: Theme.border-subtle;
+    border-width: 1px;
+    border-radius: 10px;
+    drop-shadow-color: Theme.shadow-soft;
+    drop-shadow-blur: 14px;
+    drop-shadow-offset-y: 3px;
+}
+
+component ZenToggle inherits Rectangle {
+    in-out property <bool> checked: false;
+    callback toggled(bool);
+
+    width: 38px;
+    height: 20px;
+    border-radius: 10px;
+    background: root.checked ? Theme.accent-navy : #CBD5E1;
+    animate background { duration: 140ms; easing: ease-in-out; }
+
+    Rectangle {
+        width: 14px;
+        height: 14px;
+        border-radius: 7px;
+        background: #FFFFFF;
+        y: 3px;
+        x: root.checked ? 21px : 3px;
+        drop-shadow-color: rgba(0, 0, 0, 0.12);
+        drop-shadow-blur: 3px;
+        animate x { duration: 140ms; easing: ease-in-out; }
+    }
+
+    TouchArea {
+        mouse-cursor: pointer;
+        clicked => {
+            root.checked = !root.checked;
+            root.toggled(root.checked);
+        }
+    }
+}
+
+component ZenSlider inherits Rectangle {
+    in property <string> label;
+    in property <string> value-text;
+    in property <float> minimum: 0.0;
+    in property <float> maximum: 100.0;
+    in-out property <float> value: 50.0;
+    in property <color> fill-color: Theme.accent-navy;
+    callback changed(float);
+
+    height: 50px;
+    background: transparent;
+
+    property <float> normalized: clamp((root.value - root.minimum) / max(0.0001, root.maximum - root.minimum), 0.0, 1.0);
+
+    VerticalLayout {
+        spacing: 6px;
+
+        HorizontalLayout {
+            Text {
+                text: root.label;
+                color: Theme.text-secondary;
+                font-size: 12.5px;
+                font-weight: 600;
+                vertical-alignment: center;
+                horizontal-stretch: 1;
+                overflow: elide;
+            }
+            Rectangle {
+                height: 22px;
+                min-width: 58px;
+                border-radius: 5px;
+                background: Theme.bg-sidebar;
+                border-width: 1px;
+                border-color: Theme.border-subtle;
+                HorizontalLayout {
+                    padding-left: 8px;
+                    padding-right: 8px;
+                    Text {
+                        text: root.value-text;
+                        color: Theme.text-primary;
+                        font-size: 11.5px;
+                        font-weight: 700;
+                        horizontal-alignment: center;
+                        vertical-alignment: center;
+                    }
+                }
+            }
+        }
+
+        Rectangle {
+            height: 18px;
+            background: transparent;
+
+            Rectangle {
+                height: 6px;
+                y: (parent.height - self.height) / 2;
+                width: parent.width;
+                border-radius: 3px;
+                background: #E2E8F0;
+
+                Rectangle {
+                    x: 0px;
+                    y: 0px;
+                    height: parent.height;
+                    width: parent.width * root.normalized;
+                    border-radius: 3px;
+                    background: root.fill-color;
+                }
+            }
+
+            Rectangle {
+                width: 16px;
+                height: 16px;
+                border-radius: 8px;
+                y: (parent.height - self.height) / 2;
+                x: (parent.width - self.width) * root.normalized;
+                background: #FFFFFF;
+                border-width: 2.5px;
+                border-color: root.fill-color;
+                drop-shadow-color: rgba(15, 23, 42, 0.14);
+                drop-shadow-blur: 4px;
+                drop-shadow-offset-y: 1px;
+            }
+
+            TouchArea {
+                mouse-cursor: pointer;
+                moved => {
+                    if (self.pressed) {
+                        root.value = clamp(
+                            root.minimum + (self.mouse-x / parent.width) * (root.maximum - root.minimum),
+                            root.minimum,
+                            root.maximum
+                        );
+                        root.changed(root.value);
+                    }
+                }
+                pointer-event(event) => {
+                    if (event.button == PointerEventButton.left && event.kind == PointerEventKind.down) {
+                        root.value = clamp(
+                            root.minimum + (self.mouse-x / parent.width) * (root.maximum - root.minimum),
+                            root.minimum,
+                            root.maximum
+                        );
+                        root.changed(root.value);
+                    }
+                }
+            }
+        }
+    }
+}
+
+// Sidebar Game Row with Real .ico Image + Per-Game Settings Button (⚙) + Delete Profile Button (✕) + Drag & Drop
+component GameTabRow inherits Rectangle {
+    in property <string> title;
+    in property <image> game-icon;
+    in property <bool> active: false;
+    in property <bool> can-delete: true;
+    in property <bool> is-dragging: false;
+    in property <bool> is-drop-target: false;
+    callback clicked();
+    callback open-settings();
+    callback delete-game();
+    callback drag-start();
+    callback drag-move(length);
+    callback drag-end(length);
+
+    property <bool> drag-initiated: false;
+
+    height: 38px;
+    border-radius: 7px;
+    opacity: root.is-dragging ? 0.35 : 1.0;
+    background: root.is-dragging
+        ? rgba(15, 23, 42, 0.05)
+        : (root.is-drop-target
+            ? rgba(59, 130, 246, 0.16)
+            : (root.active ? Theme.accent-navy : (row-touch.has-hover ? Theme.hover-glass : transparent)));
+    border-width: (root.is-dragging || root.is-drop-target) ? 1.5px : 0px;
+    border-color: root.is-drop-target ? #3B82F6 : (root.is-dragging ? #94A3B8 : transparent);
+    drop-shadow-color: transparent;
+    drop-shadow-blur: 0px;
+    animate background { duration: 100ms; }
+
+    row-touch := TouchArea {
+        mouse-cursor: pointer;
+        pointer-event(event) => {
+            if (event.button == PointerEventButton.left) {
+                if (event.kind == PointerEventKind.down) {
+                    root.drag-initiated = false;
+                } else if (event.kind == PointerEventKind.up || event.kind == PointerEventKind.cancel) {
+                    if (root.drag-initiated) {
+                        root.drag-initiated = false;
+                        root.drag-end(self.mouse-y - self.pressed-y);
+                    } else {
+                        root.clicked();
+                    }
+                }
+            }
+        }
+        moved => {
+            if (self.pressed) {
+                let d = self.mouse-y - self.pressed-y;
+                if (!root.drag-initiated && abs(d) >= 5px) {
+                    root.drag-initiated = true;
+                    root.drag-start();
+                }
+                if (root.drag-initiated) {
+                    root.drag-move(d);
+                }
+            }
+        }
+    }
+
+    HorizontalLayout {
+        padding-left: 7px;
+        padding-right: 6px;
+        spacing: 4px;
+
+        // Visual Drag Grip Handle (⠿)
+        Rectangle {
+            width: 8px;
+            height: 14px;
+            y: (parent.height - self.height) / 2;
+            Path {
+                width: 5px;
+                height: 11px;
+                commands: "M 1 2 L 2 2 M 4 2 L 5 2 M 1 6 L 2 6 M 4 6 L 5 6 M 1 10 L 2 10 M 4 10 L 5 10";
+                stroke: root.active ? rgba(255, 255, 255, 0.5) : (row-touch.has-hover || root.is-dragging ? Theme.text-secondary : #CBD5E1);
+                stroke-width: 1.8px;
+                fill: transparent;
+            }
+        }
+
+        // Real Game Icon (.ico)
+        Rectangle {
+            width: 20px;
+            height: 20px;
+            y: (parent.height - self.height) / 2;
+            border-radius: 4px;
+            clip: true;
+            background: transparent;
+
+            Image {
+                width: 20px;
+                height: 20px;
+                source: root.game-icon;
+                image-fit: contain;
+            }
+        }
+
+        Rectangle {
+            width: 2px;
+            background: transparent;
+        }
+
+        Text {
+            text: root.title;
+            color: root.active ? #FFFFFF : Theme.text-secondary;
+            font-size: 12.5px;
+            font-weight: root.active ? 600 : 500;
+            vertical-alignment: center;
+            horizontal-stretch: 1;
+            overflow: elide;
+        }
+
+        // Per-Game Settings Button (Sliders / Tune Icon)
+        Rectangle {
+            width: 24px;
+            height: 24px;
+            y: (parent.height - self.height) / 2;
+            border-radius: 5px;
+            background: gear-touch.has-hover
+                ? (root.active ? rgba(255, 255, 255, 0.18) : rgba(15, 23, 42, 0.08))
+                : transparent;
+
+            Path {
+                width: 12px;
+                height: 12px;
+                x: (parent.width - self.width) / 2;
+                y: (parent.height - self.height) / 2;
+                commands: "M 1 3.5 L 11 3.5 M 4 1.5 L 4 5.5 M 1 8.5 L 11 8.5 M 8 6.5 L 8 10.5";
+                stroke: root.active ? #E2E8F0 : Theme.text-muted;
+                stroke-width: 1.5px;
+                fill: transparent;
+            }
+
+            gear-touch := TouchArea {
+                mouse-cursor: pointer;
+                clicked => { root.open-settings(); }
+            }
+        }
+
+        // Direct Delete Profile Button (✕)
+        if root.can-delete : Rectangle {
+            width: 22px;
+            height: 24px;
+            y: (parent.height - self.height) / 2;
+            border-radius: 5px;
+            background: del-touch.has-hover
+                ? (root.active ? rgba(239, 68, 68, 0.85) : rgba(239, 68, 68, 0.14))
+                : transparent;
+
+            Path {
+                width: 9px;
+                height: 9px;
+                x: (parent.width - self.width) / 2;
+                y: (parent.height - self.height) / 2;
+                commands: "M 1 1 L 8 8 M 8 1 L 1 8";
+                stroke: del-touch.has-hover
+                    ? (root.active ? #FFFFFF : #DC2626)
+                    : (root.active ? #CBD5E1 : Theme.text-muted);
+                stroke-width: 1.5px;
+                fill: transparent;
+            }
+
+            del-touch := TouchArea {
+                mouse-cursor: pointer;
+                clicked => { root.delete-game(); }
+            }
+        }
+    }
+}
+
+component PresetRow inherits Rectangle {
+    in property <string> name;
+    in property <string> hotkey;
+    in property <bool> selected: false;
+    in property <bool> applied: false;
+    in property <bool> is-dragging: false;
+    in property <bool> is-drop-target: false;
+    in property <bool> can-move-up: false;
+    in property <bool> can-move-down: false;
+    callback clicked();
+    callback move-up();
+    callback move-down();
+    callback drag-start();
+    callback drag-move(length);
+    callback drag-end(length);
+
+    property <bool> drag-initiated: false;
+
+    height: 38px;
+    border-radius: 7px;
+    opacity: root.is-dragging ? 0.35 : 1.0;
+    background: root.is-dragging
+        ? rgba(15, 23, 42, 0.05)
+        : (root.is-drop-target
+            ? rgba(59, 130, 246, 0.14)
+            : (root.selected ? #FFFFFF : (touch.has-hover ? Theme.hover-glass : transparent)));
+    border-width: (root.is-dragging || root.is-drop-target || root.selected) ? 1.5px : 0px;
+    border-color: root.is-drop-target
+        ? #3B82F6
+        : (root.is-dragging
+            ? #94A3B8
+            : (root.selected ? Theme.border-subtle : transparent));
+    drop-shadow-color: root.selected && !root.is-dragging ? Theme.shadow-soft : transparent;
+    drop-shadow-blur: root.selected && !root.is-dragging ? 6px : 0px;
+
+    touch := TouchArea {
+        mouse-cursor: pointer;
+        pointer-event(event) => {
+            if (event.button == PointerEventButton.left) {
+                if (event.kind == PointerEventKind.down) {
+                    root.drag-initiated = false;
+                } else if (event.kind == PointerEventKind.up || event.kind == PointerEventKind.cancel) {
+                    if (root.drag-initiated) {
+                        root.drag-initiated = false;
+                        root.drag-end(self.mouse-y - self.pressed-y);
+                    } else {
+                        root.clicked();
+                    }
+                }
+            }
+        }
+        moved => {
+            if (self.pressed) {
+                let d = self.mouse-y - self.pressed-y;
+                if (!root.drag-initiated && abs(d) >= 5px) {
+                    root.drag-initiated = true;
+                    root.drag-start();
+                }
+                if (root.drag-initiated) {
+                    root.drag-move(d);
+                }
+            }
+        }
+    }
+
+    HorizontalLayout {
+        padding-left: 7px;
+        padding-right: 6px;
+        spacing: 5px;
+
+        // Visual Drag Grip Handle (⠿)
+        Rectangle {
+            width: 8px;
+            height: 14px;
+            y: (parent.height - self.height) / 2;
+            Path {
+                width: 5px;
+                height: 11px;
+                commands: "M 1 2 L 2 2 M 4 2 L 5 2 M 1 6 L 2 6 M 4 6 L 5 6 M 1 10 L 2 10 M 4 10 L 5 10";
+                stroke: touch.has-hover || root.is-dragging ? Theme.text-secondary : #CBD5E1;
+                stroke-width: 1.8px;
+                fill: transparent;
+            }
+        }
+
+        Rectangle {
+            width: 7px;
+            height: 7px;
+            border-radius: 3.5px;
+            y: (parent.height - self.height) / 2;
+            background: root.applied ? Theme.status-online : (root.selected ? Theme.accent-navy : #CBD5E1);
+        }
+
+        Text {
+            text: root.name;
+            color: root.selected ? Theme.text-primary : Theme.text-secondary;
+            font-size: 12px;
+            font-weight: root.selected ? 600 : 500;
+            vertical-alignment: center;
+            horizontal-stretch: 1;
+            overflow: elide;
+        }
+
+        if root.hotkey != "" : Rectangle {
+            height: 20px;
+            y: (parent.height - self.height) / 2;
+            border-radius: 4px;
+            background: root.selected ? Theme.bg-sidebar : rgba(226, 232, 240, 0.6);
+            border-width: 1px;
+            border-color: Theme.border-subtle;
+
+            HorizontalLayout {
+                padding-left: 5px;
+                padding-right: 5px;
+                Text {
+                    text: root.hotkey;
+                    color: Theme.text-muted;
+                    font-size: 9.5px;
+                    font-weight: 600;
+                    vertical-alignment: center;
+                    horizontal-alignment: center;
+                }
+            }
+        }
+
+        // Compact Reorder Up / Down Controls
+        if root.can-move-up || root.can-move-down : VerticalLayout {
+            width: 16px;
+            height: 28px;
+            y: (parent.height - self.height) / 2;
+            spacing: 2px;
+
+            Rectangle {
+                width: 16px;
+                height: 13px;
+                border-radius: 3px;
+                background: (root.can-move-up && up-touch.has-hover) ? rgba(15, 23, 42, 0.08) : transparent;
+
+                Path {
+                    width: 8px;
+                    height: 5px;
+                    x: 4px;
+                    y: 4px;
+                    commands: "M 1 4 L 4 1 L 7 4";
+                    stroke: root.can-move-up
+                        ? (up-touch.has-hover ? Theme.accent-navy : Theme.text-muted)
+                        : #E2E8F0;
+                    stroke-width: 1.4px;
+                    fill: transparent;
+                }
+
+                up-touch := TouchArea {
+                    enabled: root.can-move-up;
+                    mouse-cursor: root.can-move-up ? pointer : default;
+                    clicked => { root.move-up(); }
+                }
+            }
+
+            Rectangle {
+                width: 16px;
+                height: 13px;
+                border-radius: 3px;
+                background: (root.can-move-down && down-touch.has-hover) ? rgba(15, 23, 42, 0.08) : transparent;
+
+                Path {
+                    width: 8px;
+                    height: 5px;
+                    x: 4px;
+                    y: 4px;
+                    commands: "M 1 1 L 4 4 L 7 1";
+                    stroke: root.can-move-down
+                        ? (down-touch.has-hover ? Theme.accent-navy : Theme.text-muted)
+                        : #E2E8F0;
+                    stroke-width: 1.4px;
+                    fill: transparent;
+                }
+
+                down-touch := TouchArea {
+                    enabled: root.can-move-down;
+                    mouse-cursor: root.can-move-down ? pointer : default;
+                    clicked => { root.move-down(); }
+                }
+            }
+        }
+    }
+}
+
+component ActionButton inherits Rectangle {
+    in property <string> text;
+    in property <string> icon-path: "";
+    in property <bool> primary: false;
+    in property <bool> danger: false;
+    callback clicked();
+
+    height: 34px;
+    border-radius: 7px;
+    background: root.primary
+        ? (touch.has-hover ? Theme.accent-navy-hover : Theme.accent-navy)
+        : (root.danger
+            ? (touch.has-hover ? rgba(220, 38, 38, 0.14) : rgba(220, 38, 38, 0.07))
+            : (touch.has-hover ? Theme.hover-glass : #FFFFFF));
+    border-width: root.primary ? 0px : 1px;
+    border-color: root.danger ? rgba(220, 38, 38, 0.35) : Theme.border-subtle;
+    animate background { duration: 120ms; }
+
+    HorizontalLayout {
+        padding-left: 13px;
+        padding-right: 13px;
+        spacing: 7px;
+        alignment: center;
+
+        if root.icon-path != "" : Path {
+            width: 12px;
+            height: 12px;
+            y: (parent.height - self.height) / 2;
+            commands: root.icon-path;
+            stroke: root.primary ? #FFFFFF : (root.danger ? #DC2626 : Theme.text-secondary);
+            stroke-width: 1.7px;
+            fill: transparent;
+        }
+
+        Text {
+            text: root.text;
+            color: root.primary ? #FFFFFF : (root.danger ? #DC2626 : Theme.text-primary);
+            font-size: 12px;
+            font-weight: 600;
+            vertical-alignment: center;
+            horizontal-alignment: center;
+        }
+    }
+
+    touch := TouchArea {
+        mouse-cursor: pointer;
+        clicked => { root.clicked(); }
+    }
+}
+
+// Window Control Button for Custom TitleBar (—, □, ✕)
+component TitleBarControlBtn inherits Rectangle {
+    in property <string> icon-commands;
+    in property <bool> is-close: false;
+    callback clicked();
+
+    width: 36px;
+    height: 30px;
+    border-radius: 6px;
+    background: touch.has-hover
+        ? (root.is-close ? #EF4444 : Theme.hover-glass)
+        : transparent;
+
+    Path {
+        width: 11px;
+        height: 11px;
+        x: (parent.width - self.width) / 2;
+        y: (parent.height - self.height) / 2;
+        commands: root.icon-commands;
+        stroke: (touch.has-hover && root.is-close) ? #FFFFFF : Theme.text-secondary;
+        stroke-width: 1.5px;
+        fill: transparent;
+    }
+
+    touch := TouchArea {
+        mouse-cursor: pointer;
+        clicked => { root.clicked(); }
+    }
+}
+
+export component AppWindow inherits Window {
+    title: "ZenGamma — Display & Color Profile Manager";
+    icon: @image-url("app_icon.png");
+    no-frame: true;
+    min-width: 940px;
+    min-height: 650px;
+    preferred-width: 980px;
+    preferred-height: 680px;
+    background: Theme.bg-main;
+
+    // --- State Properties ---
+    in-out property <int> selected-game-index: 0;
+    in-out property <[GameItem]> games: [];
+    in-out property <[PresetItem]> presets: [];
+    in-out property <int> selected-preset-index: 0;
+
+    // Mouse Drag & Drop State for Games & Presets
+    in-out property <int> dragging-game-index: -1;
+    in-out property <int> game-drop-target-index: -1;
+    in-out property <length> game-drag-delta-y: 0px;
+
+    in-out property <int> dragging-preset-index: -1;
+    in-out property <int> preset-drop-target-index: -1;
+    in-out property <length> preset-drag-delta-y: 0px;
+
+    // Active Editing Preset Details
+    in-out property <string> current-preset-name: "[Tryhard] Max Night Vision";
+    in-out property <string> current-hotkey: "Ctrl+F1";
+    in-out property <bool> current-preset-is-builtin: true;
+    in-out property <bool> recording-hotkey: false;
+
+    // Global Reset to Default Hotkey Details
+    in-out property <string> reset-hotkey: "Ctrl+Shift+R";
+    in-out property <bool> recording-reset-hotkey: false;
+
+    // Display Sliders
+    in-out property <float> brightness: 22.0;
+    in-out property <float> contrast: 64.0;
+    in-out property <float> gamma: 2.35;
+    in-out property <bool> rgb-split-enabled: false;
+    in-out property <float> gamma-red: 2.35;
+    in-out property <float> gamma-green: 2.35;
+    in-out property <float> gamma-blue: 2.35;
+    in-out property <float> saturation: 135.0;
+
+    // Status Indicator Properties
+    in-out property <string> active-profile-label: "Reset to Default";
+    in-out property <string> backend-status-label: "GDI + AMD ADL + DWM Saturation";
+    in-out property <bool> profile-engaged: false;
+
+    // --- Game Editor / Add Game Modal Properties ---
+    in-out property <bool> show-game-modal: false;
+    in-out property <bool> game-modal-is-new: false;
+    in-out property <int> game-modal-target-idx: 0;
+    in-out property <bool> game-modal-is-builtin: false;
+    in-out property <string> game-modal-name: "";
+    in-out property <string> game-modal-icon-file: "";
+    in-out property <image> game-modal-icon-preview;
+    in-out property <string> game-modal-search: "";
+    in-out property <[CatalogEntryItem]> catalog-results: [];
+    in-out property <[CatalogEntryItem]> all-icons-gallery: [];
+
+    // --- App Settings Modal Properties ---
+    in-out property <bool> show-settings-modal: false;
+    in-out property <bool> setting-close-to-tray: true;
+    in-out property <bool> setting-autostart: false;
+    in-out property <bool> setting-start-minimized: false;
+    in-out property <string> presets-file-path-label: "user_presets.json";
+
+    // --- Callbacks to Rust Backend ---
+    callback drag-window();
+    callback drag-window-move();
+    callback drag-window-end();
+    callback minimize-window();
+    callback maximize-window();
+    callback close-window();
+    callback minimize-to-tray();
+
+    callback select-game(int);
+    callback reorder-game(int, int);
+    callback open-add-game();
+    callback open-edit-game(int);
+    callback delete-game-profile(int);
+    callback search-catalog-changed(string);
+    callback save-game-modal();
+    callback delete-game-modal();
+    callback close-game-modal();
+
+    callback open-app-settings();
+    callback save-app-settings();
+
+    callback select-preset(int);
+    callback move-preset(int, int);
+    callback create-preset();
+    callback delete-preset();
+    callback parameters-changed();
+    callback key-captured(bool, bool, bool, string);
+    callback start-record-reset-hotkey();
+    callback reset-hotkey-captured(bool, bool, bool, string);
+    callback save-preset();
+    callback apply-now();
+    callback reset-to-default();
+
+    // Invisible FocusScope used when recording a global hotkey press
+    hotkey-capture-scope := FocusScope {
+        width: 0px;
+        height: 0px;
+        key-pressed(event) => {
+            if (root.recording-hotkey) {
+                root.key-captured(
+                    event.modifiers.control,
+                    event.modifiers.alt,
+                    event.modifiers.shift,
+                    event.text
+                );
+                return accept;
+            }
+            if (root.recording-reset-hotkey) {
+                root.reset-hotkey-captured(
+                    event.modifiers.control,
+                    event.modifiers.alt,
+                    event.modifiers.shift,
+                    event.text
+                );
+                return accept;
+            }
+            return reject;
+        }
+    }
+
+    // Outer Border Frame around Frameless Window
+    Rectangle {
+        width: 100%;
+        height: 100%;
+        background: Theme.bg-main;
+        border-width: 1px;
+        border-color: #CBD5E1;
+
+        VerticalLayout {
+            // =========================================================================
+            // 1. CUSTOM FRAMELESS WINDOW TITLEBAR (40px)
+            // =========================================================================
+            Rectangle {
+                height: 40px;
+                background: Theme.bg-sidebar;
+
+                // Non-modal Drag Area covering the titlebar background
+                TouchArea {
+                    moved => {
+                        if (self.pressed) {
+                            root.drag-window-move();
+                        }
+                    }
+                    pointer-event(event) => {
+                        if (event.button == PointerEventButton.left) {
+                            if (event.kind == PointerEventKind.down) {
+                                root.drag-window();
+                            } else if (event.kind == PointerEventKind.up || event.kind == PointerEventKind.cancel) {
+                                root.drag-window-end();
+                            }
+                        }
+                    }
+                }
+
+                HorizontalLayout {
+                    padding-left: 14px;
+                    padding-right: 8px;
+                    spacing: 10px;
+
+                    // Brand Logo Icon + Title (Left-Aligned)
+                    HorizontalLayout {
+                        spacing: 9px;
+                        alignment: start;
+                        horizontal-stretch: 1;
+
+                        Rectangle {
+                            width: 24px;
+                            height: 24px;
+                            y: (parent.height - self.height) / 2;
+                            border-radius: 6px;
+                            background: Theme.accent-navy;
+
+                            Path {
+                                width: 13px;
+                                height: 13px;
+                                x: 5.5px;
+                                y: 5.5px;
+                                commands: "M 2 12 L 6 4 L 10 9 L 14 2";
+                                stroke: #FFFFFF;
+                                stroke-width: 2px;
+                                fill: transparent;
+                            }
+                        }
+
+                        Text {
+                            text: "ZEN GAMMA";
+                            color: Theme.text-primary;
+                            font-size: 12.5px;
+                            font-weight: 800;
+                            letter-spacing: 0.6px;
+                            vertical-alignment: center;
+                        }
+
+                        Text {
+                            text: "—  Display & Color Profile Manager";
+                            color: Theme.text-muted;
+                            font-size: 11.5px;
+                            font-weight: 500;
+                            vertical-alignment: center;
+                        }
+                    }
+
+                    // Right Header Controls: App Settings, Tray, Minimize, Maximize, Close
+                    HorizontalLayout {
+                        spacing: 6px;
+                        alignment: end;
+                        horizontal-stretch: 0;
+
+                        // App Settings Button
+                        Rectangle {
+                            height: 28px;
+                            y: (parent.height - self.height) / 2;
+                            border-radius: 6px;
+                            border-width: 1px;
+                            border-color: Theme.border-subtle;
+                            background: settings-touch.has-hover ? Theme.hover-glass : #FFFFFF;
+
+                            HorizontalLayout {
+                                padding-left: 10px;
+                                padding-right: 10px;
+                                spacing: 6px;
+                                Path {
+                                    width: 12px;
+                                    height: 12px;
+                                    y: (parent.height - self.height) / 2;
+                                    commands: "M 1 3.5 L 11 3.5 M 4 1.5 L 4 5.5 M 1 8.5 L 11 8.5 M 8 6.5 L 8 10.5";
+                                    stroke: Theme.text-secondary;
+                                    stroke-width: 1.5px;
+                                    fill: transparent;
+                                }
+                                Text {
+                                    text: "Settings";
+                                    color: Theme.text-secondary;
+                                    font-size: 11px;
+                                    font-weight: 600;
+                                    vertical-alignment: center;
+                                }
+                            }
+
+                            settings-touch := TouchArea {
+                                mouse-cursor: pointer;
+                                clicked => { root.open-app-settings(); }
+                            }
+                        }
+
+                        // Hide to Tray Pill
+                        Rectangle {
+                            height: 28px;
+                            y: (parent.height - self.height) / 2;
+                            border-radius: 6px;
+                            border-width: 1px;
+                            border-color: Theme.border-subtle;
+                            background: tray-touch.has-hover ? Theme.hover-glass : #FFFFFF;
+
+                            HorizontalLayout {
+                                padding-left: 10px;
+                                padding-right: 10px;
+                                spacing: 5px;
+                                Path {
+                                    width: 11px;
+                                    height: 11px;
+                                    y: (parent.height - self.height) / 2;
+                                    commands: "M 2 9 L 10 9 M 6 2 L 6 7 M 3 5 L 6 8 L 9 5";
+                                    stroke: Theme.text-secondary;
+                                    stroke-width: 1.5px;
+                                    fill: transparent;
+                                }
+                                Text {
+                                    text: "Tray";
+                                    color: Theme.text-secondary;
+                                    font-size: 11px;
+                                    font-weight: 600;
+                                    vertical-alignment: center;
+                                }
+                            }
+
+                            tray-touch := TouchArea {
+                                mouse-cursor: pointer;
+                                clicked => { root.minimize-to-tray(); }
+                            }
+                        }
+
+                        Rectangle {
+                            width: 1px;
+                            height: 18px;
+                            y: (parent.height - self.height) / 2;
+                            background: Theme.border-subtle;
+                        }
+
+                        // Minimize (—)
+                        Rectangle {
+                            width: 34px;
+                            height: 28px;
+                            y: (parent.height - self.height) / 2;
+                            TitleBarControlBtn {
+                                width: 100%;
+                                height: 100%;
+                                icon-commands: "M 2 6 L 10 6";
+                                clicked => { root.minimize-window(); }
+                            }
+                        }
+
+                        // Maximize (□)
+                        Rectangle {
+                            width: 34px;
+                            height: 28px;
+                            y: (parent.height - self.height) / 2;
+                            TitleBarControlBtn {
+                                width: 100%;
+                                height: 100%;
+                                icon-commands: "M 2 2 L 10 2 L 10 10 L 2 10 Z";
+                                clicked => { root.maximize-window(); }
+                            }
+                        }
+
+                        // Close (✕)
+                        Rectangle {
+                            width: 34px;
+                            height: 28px;
+                            y: (parent.height - self.height) / 2;
+                            TitleBarControlBtn {
+                                width: 100%;
+                                height: 100%;
+                                is-close: true;
+                                icon-commands: "M 2 2 L 10 10 M 10 2 L 2 10";
+                                clicked => { root.close-window(); }
+                            }
+                        }
+                    }
+                }
+
+                // Bottom separator line
+                Rectangle {
+                    y: parent.height - 1px;
+                    width: 100%;
+                    height: 1px;
+                    background: Theme.border-subtle;
+                }
+            }
+
+            // =========================================================================
+            // 2. BODY: LEFT SIDEBAR + MAIN VIEW
+            // =========================================================================
+            HorizontalLayout {
+                vertical-stretch: 1;
+
+                // LEFT SIDEBAR (#F1F5F9)
+                Rectangle {
+                    width: 274px;
+                    background: Theme.bg-sidebar;
+
+                    VerticalLayout {
+                        padding: 16px;
+                        spacing: 12px;
+
+                        // Game Selector Section (Scrollable + Add Game + Per-Game Settings)
+                        VerticalLayout {
+                            spacing: 6px;
+                            vertical-stretch: 0;
+
+                            HorizontalLayout {
+                                Text {
+                                    text: "GAME PROFILES";
+                                    color: Theme.text-muted;
+                                    font-size: 10.5px;
+                                    font-weight: 700;
+                                    letter-spacing: 0.8px;
+                                    vertical-alignment: center;
+                                    horizontal-stretch: 1;
+                                }
+                                Text {
+                                    text: root.games.length + " games";
+                                    color: Theme.text-muted;
+                                    font-size: 10.5px;
+                                    vertical-alignment: center;
+                                }
+                            }
+
+                            games-box := Rectangle {
+                                height: 164px;
+                                clip: true;
+                                background: transparent;
+
+                                games-flick := Flickable {
+                                    width: parent.width;
+                                    height: parent.height;
+                                    interactive: root.dragging-game-index < 0;
+                                    content-width: parent.width;
+                                    content-height: max(parent.height, root.games.length * 42px - 4px);
+
+                                    for game[idx] in root.games : GameTabRow {
+                                        x: 0px;
+                                        y: idx * 42px;
+                                        width: parent.width - (root.games.length > 4 ? 8px : 0px);
+                                        title: game.name;
+                                        game-icon: game.icon;
+                                        active: idx == root.selected-game-index;
+                                        is-dragging: root.dragging-game-index == idx;
+                                        is-drop-target: root.dragging-game-index >= 0 && root.game-drop-target-index == idx && root.dragging-game-index != idx;
+                                        can-delete: root.games.length > 1;
+                                        clicked => {
+                                            root.recording-hotkey = false;
+                                            root.recording-reset-hotkey = false;
+                                            root.selected-game-index = idx;
+                                            root.select-game(idx);
+                                        }
+                                        drag-start => {
+                                            root.recording-hotkey = false;
+                                            root.recording-reset-hotkey = false;
+                                            root.dragging-game-index = idx;
+                                            root.game-drop-target-index = idx;
+                                            root.game-drag-delta-y = 0px;
+                                        }
+                                        drag-move(delta) => {
+                                            root.game-drag-delta-y = delta;
+                                            let target = clamp(round((idx * 42px + delta) / 42px), 0, root.games.length - 1);
+                                            root.game-drop-target-index = target;
+                                        }
+                                        drag-end(delta) => {
+                                            if (abs(delta) >= 16px) {
+                                                let target = clamp(round((idx * 42px + delta) / 42px), 0, root.games.length - 1);
+                                                if (target != idx) {
+                                                    root.reorder-game(idx, target);
+                                                }
+                                            }
+                                            root.dragging-game-index = -1;
+                                            root.game-drop-target-index = -1;
+                                            root.game-drag-delta-y = 0px;
+                                        }
+                                        open-settings => {
+                                            root.recording-hotkey = false;
+                                            root.recording-reset-hotkey = false;
+                                            root.open-edit-game(idx);
+                                        }
+                                        delete-game => {
+                                            root.recording-hotkey = false;
+                                            root.recording-reset-hotkey = false;
+                                            root.delete-game-profile(idx);
+                                        }
+                                    }
+
+                                    // Floating Drag Ghost Card for Game Profile (Tracks cursor smoothly, zero jitter)
+                                    if root.dragging-game-index >= 0 && root.dragging-game-index < root.games.length : Rectangle {
+                                        x: 0px;
+                                        y: clamp(root.dragging-game-index * 42px + root.game-drag-delta-y, 0px, max(0px, root.games.length * 42px - 38px));
+                                        width: parent.width - (root.games.length > 4 ? 8px : 0px);
+                                        height: 38px;
+                                        border-radius: 7px;
+                                        background: Theme.accent-navy;
+                                        border-width: 1.5px;
+                                        border-color: #60A5FA;
+                                        drop-shadow-color: rgba(15, 23, 42, 0.45);
+                                        drop-shadow-blur: 14px;
+                                        drop-shadow-offset-y: 4px;
+
+                                        HorizontalLayout {
+                                            padding-left: 7px;
+                                            padding-right: 6px;
+                                            spacing: 4px;
+
+                                            Rectangle {
+                                                width: 8px;
+                                                height: 14px;
+                                                y: (parent.height - self.height) / 2;
+                                                Path {
+                                                    width: 5px;
+                                                    height: 11px;
+                                                    commands: "M 1 2 L 2 2 M 4 2 L 5 2 M 1 6 L 2 6 M 4 6 L 5 6 M 1 10 L 2 10 M 4 10 L 5 10";
+                                                    stroke: #93C5FD;
+                                                    stroke-width: 1.8px;
+                                                    fill: transparent;
+                                                }
+                                            }
+
+                                            Rectangle {
+                                                width: 20px;
+                                                height: 20px;
+                                                y: (parent.height - self.height) / 2;
+                                                border-radius: 4px;
+                                                clip: true;
+                                                background: transparent;
+
+                                                Image {
+                                                    width: 20px;
+                                                    height: 20px;
+                                                    source: root.games[root.dragging-game-index].icon;
+                                                    image-fit: contain;
+                                                }
+                                            }
+
+                                            Rectangle {
+                                                width: 2px;
+                                                background: transparent;
+                                            }
+
+                                            Text {
+                                                text: root.games[root.dragging-game-index].name;
+                                                color: #FFFFFF;
+                                                font-size: 12.5px;
+                                                font-weight: 600;
+                                                vertical-alignment: center;
+                                                horizontal-stretch: 1;
+                                                overflow: elide;
+                                            }
+                                        }
+                                    }
+                                }
+
+                                // Subtle Scrollbar Indicator when games overflow
+                                if root.games.length > 4 : Rectangle {
+                                    x: parent.width - 4px;
+                                    y: clamp((-games-flick.content-y / max(1px, games-flick.content-height - games-box.height)) * max(0px, games-box.height - 36px), 0px, max(0px, games-box.height - 36px));
+                                    width: 4px;
+                                    height: 36px;
+                                    border-radius: 2px;
+                                    background: #CBD5E1;
+                                }
+                            }
+
+                            ActionButton {
+                                text: "Add Game Profile";
+                                icon-path: "M 6 1 L 6 11 M 1 6 L 11 6";
+                                primary: false;
+                                clicked => {
+                                    root.recording-hotkey = false;
+                                    root.recording-reset-hotkey = false;
+                                    root.open-add-game();
+                                }
+                            }
+                        }
+
+                        // Divider
+                        Rectangle {
+                            height: 1px;
+                            background: Theme.border-subtle;
+                        }
+
+                        // Presets List Section (Scrollable, Active Tab Scoped)
+                        VerticalLayout {
+                            spacing: 6px;
+                            vertical-stretch: 1;
+
+                            HorizontalLayout {
+                                Text {
+                                    text: "PRESETS (ACTIVE TAB)";
+                                    color: Theme.text-muted;
+                                    font-size: 10.5px;
+                                    font-weight: 700;
+                                    letter-spacing: 0.8px;
+                                    vertical-alignment: center;
+                                    horizontal-stretch: 1;
+                                }
+                                Text {
+                                    text: root.presets.length + " total";
+                                    color: Theme.text-muted;
+                                    font-size: 10.5px;
+                                    vertical-alignment: center;
+                                }
+                            }
+
+                            presets-box := Rectangle {
+                                vertical-stretch: 1;
+                                min-height: 180px;
+                                clip: true;
+                                background: transparent;
+
+                                presets-flick := Flickable {
+                                    width: parent.width;
+                                    height: parent.height;
+                                    interactive: root.dragging-preset-index < 0;
+                                    content-width: parent.width;
+                                    content-height: max(parent.height, root.presets.length * 42px - 4px);
+
+                                    for preset[idx] in root.presets : PresetRow {
+                                        x: 0px;
+                                        y: idx * 42px;
+                                        width: parent.width - (root.presets.length * 42px - 4px > parent.height ? 8px : 0px);
+                                        name: preset.name;
+                                        hotkey: preset.hotkey;
+                                        selected: idx == root.selected-preset-index;
+                                        applied: preset.is-active;
+                                        is-dragging: root.dragging-preset-index == idx;
+                                        is-drop-target: root.dragging-preset-index >= 0 && root.preset-drop-target-index == idx && root.dragging-preset-index != idx;
+                                        can-move-up: idx > 0;
+                                        can-move-down: idx + 1 < root.presets.length;
+                                        clicked => {
+                                            root.recording-hotkey = false;
+                                            root.recording-reset-hotkey = false;
+                                            root.selected-preset-index = idx;
+                                            root.select-preset(idx);
+                                        }
+                                        drag-start => {
+                                            root.recording-hotkey = false;
+                                            root.recording-reset-hotkey = false;
+                                            root.dragging-preset-index = idx;
+                                            root.preset-drop-target-index = idx;
+                                            root.preset-drag-delta-y = 0px;
+                                        }
+                                        drag-move(delta) => {
+                                            root.preset-drag-delta-y = delta;
+                                            let target = clamp(round((idx * 42px + delta) / 42px), 0, root.presets.length - 1);
+                                            root.preset-drop-target-index = target;
+                                        }
+                                        drag-end(delta) => {
+                                            if (abs(delta) >= 16px) {
+                                                let target = clamp(round((idx * 42px + delta) / 42px), 0, root.presets.length - 1);
+                                                if (target != idx) {
+                                                    root.move-preset(idx, target);
+                                                }
+                                            }
+                                            root.dragging-preset-index = -1;
+                                            root.preset-drop-target-index = -1;
+                                            root.preset-drag-delta-y = 0px;
+                                        }
+                                        move-up => {
+                                            root.recording-hotkey = false;
+                                            root.recording-reset-hotkey = false;
+                                            root.move-preset(idx, idx - 1);
+                                        }
+                                        move-down => {
+                                            root.recording-hotkey = false;
+                                            root.recording-reset-hotkey = false;
+                                            root.move-preset(idx, idx + 1);
+                                        }
+                                    }
+
+                                    // Floating Drag Ghost Card for Preset (Tracks cursor smoothly, zero jitter)
+                                    if root.dragging-preset-index >= 0 && root.dragging-preset-index < root.presets.length : Rectangle {
+                                        x: 0px;
+                                        y: clamp(root.dragging-preset-index * 42px + root.preset-drag-delta-y, 0px, max(0px, root.presets.length * 42px - 38px));
+                                        width: parent.width - (root.presets.length * 42px - 4px > parent.height ? 8px : 0px);
+                                        height: 38px;
+                                        border-radius: 7px;
+                                        background: #FFFFFF;
+                                        border-width: 1.5px;
+                                        border-color: Theme.accent-navy;
+                                        drop-shadow-color: rgba(15, 23, 42, 0.35);
+                                        drop-shadow-blur: 14px;
+                                        drop-shadow-offset-y: 4px;
+
+                                        HorizontalLayout {
+                                            padding-left: 7px;
+                                            padding-right: 6px;
+                                            spacing: 5px;
+
+                                            Rectangle {
+                                                width: 8px;
+                                                height: 14px;
+                                                y: (parent.height - self.height) / 2;
+                                                Path {
+                                                    width: 5px;
+                                                    height: 11px;
+                                                    commands: "M 1 2 L 2 2 M 4 2 L 5 2 M 1 6 L 2 6 M 4 6 L 5 6 M 1 10 L 2 10 M 4 10 L 5 10";
+                                                    stroke: Theme.accent-navy;
+                                                    stroke-width: 1.8px;
+                                                    fill: transparent;
+                                                }
+                                            }
+
+                                            Rectangle {
+                                                width: 7px;
+                                                height: 7px;
+                                                border-radius: 3.5px;
+                                                y: (parent.height - self.height) / 2;
+                                                background: root.presets[root.dragging-preset-index].is-active ? Theme.status-online : Theme.accent-navy;
+                                            }
+
+                                            Text {
+                                                text: root.presets[root.dragging-preset-index].name;
+                                                color: Theme.text-primary;
+                                                font-size: 12px;
+                                                font-weight: 600;
+                                                vertical-alignment: center;
+                                                horizontal-stretch: 1;
+                                                overflow: elide;
+                                            }
+
+                                            if root.presets[root.dragging-preset-index].hotkey != "" : Rectangle {
+                                                height: 20px;
+                                                y: (parent.height - self.height) / 2;
+                                                border-radius: 4px;
+                                                background: Theme.bg-sidebar;
+                                                border-width: 1px;
+                                                border-color: Theme.border-subtle;
+
+                                                HorizontalLayout {
+                                                    padding-left: 5px;
+                                                    padding-right: 5px;
+                                                    Text {
+                                                        text: root.presets[root.dragging-preset-index].hotkey;
+                                                        color: Theme.text-muted;
+                                                        font-size: 9.5px;
+                                                        font-weight: 600;
+                                                        vertical-alignment: center;
+                                                        horizontal-alignment: center;
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+
+                                // Subtle Scrollbar Indicator when presets overflow
+                                if root.presets.length * 42px - 4px > presets-box.height : Rectangle {
+                                    x: parent.width - 4px;
+                                    y: clamp((-presets-flick.content-y / max(1px, presets-flick.content-height - presets-box.height)) * max(0px, presets-box.height - 44px), 0px, max(0px, presets-box.height - 44px));
+                                    width: 4px;
+                                    height: 44px;
+                                    border-radius: 2px;
+                                    background: #CBD5E1;
+                                }
+                            }
+
+                            ActionButton {
+                                text: "New User Preset";
+                                icon-path: "M 6 1 L 6 11 M 1 6 L 11 6";
+                                primary: false;
+                                clicked => {
+                                    root.recording-hotkey = false;
+                                    root.create-preset();
+                                }
+                            }
+                        }
+                    }
+
+                    Rectangle {
+                        x: parent.width - 1px;
+                        width: 1px;
+                        height: 100%;
+                        background: Theme.border-subtle;
+                    }
+                }
+
+                // MAIN VIEW (#F8FAFC)
+                Rectangle {
+                    horizontal-stretch: 1;
+                    background: Theme.bg-main;
+
+                    VerticalLayout {
+                        padding: 20px;
+                        spacing: 14px;
+
+                        // Status Banner Card
+                        SurfaceCard {
+                            height: 52px;
+
+                            HorizontalLayout {
+                                padding-left: 16px;
+                                padding-right: 16px;
+                                spacing: 14px;
+
+                                HorizontalLayout {
+                                    spacing: 10px;
+                                    alignment: start;
+                                    horizontal-stretch: 1;
+
+                                    Rectangle {
+                                        width: 9px;
+                                        height: 9px;
+                                        border-radius: 4.5px;
+                                        y: (parent.height - self.height) / 2;
+                                        background: root.profile-engaged ? Theme.status-online : Theme.status-standby;
+                                    }
+
+                                    VerticalLayout {
+                                        alignment: center;
+                                        spacing: 2px;
+                                        horizontal-stretch: 1;
+
+                                        HorizontalLayout {
+                                            spacing: 6px;
+                                            alignment: start;
+                                            Text {
+                                                text: root.profile-engaged ? "ACTIVE PROFILE:" : "STANDBY:";
+                                                color: Theme.text-muted;
+                                                font-size: 10.5px;
+                                                font-weight: 700;
+                                                vertical-alignment: center;
+                                            }
+                                            Text {
+                                                text: root.active-profile-label;
+                                                color: Theme.text-primary;
+                                                font-size: 11.5px;
+                                                font-weight: 700;
+                                                vertical-alignment: center;
+                                                overflow: elide;
+                                            }
+                                        }
+                                        Text {
+                                            text: root.backend-status-label + "  •  Hotkeys Active Only For Selected Game Tab";
+                                            color: Theme.text-muted;
+                                            font-size: 10.5px;
+                                            overflow: elide;
+                                        }
+                                    }
+                                }
+
+                                // Emergency Reset Shortcut Badge
+                                Rectangle {
+                                    height: 26px;
+                                    y: (parent.height - self.height) / 2;
+                                    border-radius: 5px;
+                                    background: Theme.bg-sidebar;
+                                    border-width: 1px;
+                                    border-color: Theme.border-subtle;
+
+                                    HorizontalLayout {
+                                        padding-left: 9px;
+                                        padding-right: 9px;
+                                        Text {
+                                            text: "Emergency Reset: Ctrl+Shift+R";
+                                            color: Theme.text-secondary;
+                                            font-size: 10.5px;
+                                            font-weight: 600;
+                                            vertical-alignment: center;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        // Preset Header & Press-to-Bind Hotkey Assignment Card
+                        SurfaceCard {
+                            height: 68px;
+
+                            HorizontalLayout {
+                                padding-left: 18px;
+                                padding-right: 18px;
+                                spacing: 16px;
+
+                                VerticalLayout {
+                                    alignment: center;
+                                    spacing: 4px;
+                                    horizontal-stretch: 1;
+
+                                    HorizontalLayout {
+                                        spacing: 8px;
+                                        alignment: start;
+                                        Text {
+                                            text: "PRESET NAME";
+                                            color: Theme.text-muted;
+                                            font-size: 10px;
+                                            font-weight: 700;
+                                            letter-spacing: 0.7px;
+                                            vertical-alignment: center;
+                                        }
+                                        if root.current-preset-is-builtin : Text {
+                                            text: "(DEFAULT — LOCKED)";
+                                            color: Theme.accent-navy;
+                                            font-size: 9.5px;
+                                            font-weight: 700;
+                                            vertical-alignment: center;
+                                        }
+                                        if !root.current-preset-is-builtin : Text {
+                                            text: "(USER PRESET — SAVED IN user_presets.json)";
+                                            color: Theme.status-online;
+                                            font-size: 9.5px;
+                                            font-weight: 700;
+                                            vertical-alignment: center;
+                                        }
+                                    }
+
+                                    Rectangle {
+                                        height: 32px;
+                                        border-radius: 6px;
+                                        background: Theme.bg-sidebar;
+                                        border-width: 1px;
+                                        border-color: name-input.has-focus ? Theme.accent-navy : Theme.border-subtle;
+
+                                        name-input := TextInput {
+                                            x: 10px;
+                                            width: parent.width - 20px;
+                                            height: 100%;
+                                            text <=> root.current-preset-name;
+                                            read-only: root.current-preset-is-builtin;
+                                            color: Theme.text-primary;
+                                            font-size: 13px;
+                                            font-weight: 600;
+                                            horizontal-alignment: left;
+                                            vertical-alignment: center;
+                                        }
+                                    }
+                                }
+
+                                VerticalLayout {
+                                    alignment: center;
+                                    spacing: 4px;
+                                    width: 224px;
+                                    horizontal-stretch: 0;
+
+                                    Text {
+                                        text: "GLOBAL HOTKEY (THIS GAME)";
+                                        color: Theme.text-muted;
+                                        font-size: 10px;
+                                        font-weight: 700;
+                                        letter-spacing: 0.7px;
+                                    }
+
+                                    Rectangle {
+                                        height: 32px;
+                                        border-radius: 6px;
+                                        background: root.recording-hotkey
+                                            ? #EFF6FF
+                                            : (hk-touch.has-hover ? Theme.hover-glass : Theme.bg-sidebar);
+                                        border-width: root.recording-hotkey ? 1.5px : 1px;
+                                        border-color: root.recording-hotkey ? Theme.accent-navy : Theme.border-subtle;
+
+                                        HorizontalLayout {
+                                            padding-left: 10px;
+                                            padding-right: 10px;
+                                            spacing: 6px;
+
+                                            Path {
+                                                width: 12px;
+                                                height: 12px;
+                                                y: (parent.height - self.height) / 2;
+                                                commands: "M 1 3 L 11 3 L 11 9 L 1 9 Z M 3 5 L 5 5 M 7 5 L 9 5 M 4 7 L 8 7";
+                                                stroke: Theme.accent-navy;
+                                                stroke-width: 1.3px;
+                                                fill: transparent;
+                                            }
+
+                                            Text {
+                                                text: root.recording-hotkey ? "Press keys..." : root.current-hotkey;
+                                                color: Theme.accent-navy;
+                                                font-size: 12px;
+                                                font-weight: 700;
+                                                vertical-alignment: center;
+                                                horizontal-stretch: 1;
+                                                overflow: elide;
+                                            }
+
+                                            Text {
+                                                text: root.recording-hotkey ? "Esc / Del" : "Click to set";
+                                                color: Theme.text-muted;
+                                                font-size: 10px;
+                                                vertical-alignment: center;
+                                            }
+                                        }
+
+                                        hk-touch := TouchArea {
+                                            mouse-cursor: pointer;
+                                            clicked => {
+                                                root.recording-hotkey = !root.recording-hotkey;
+                                                if (root.recording-hotkey) {
+                                                    hotkey-capture-scope.focus();
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+
+                                VerticalLayout {
+                                    alignment: center;
+                                    spacing: 4px;
+                                    width: 44px;
+                                    horizontal-stretch: 0;
+
+                                    Text {
+                                        text: root.current-preset-is-builtin ? "LOCK" : "DEL";
+                                        color: Theme.text-muted;
+                                        font-size: 10px;
+                                        font-weight: 700;
+                                        horizontal-alignment: center;
+                                    }
+
+                                    Rectangle {
+                                        width: 44px;
+                                        height: 32px;
+                                        border-radius: 6px;
+                                        background: (!root.current-preset-is-builtin && del-touch.has-hover)
+                                            ? rgba(220, 38, 38, 0.08)
+                                            : Theme.bg-sidebar;
+                                        border-width: 1px;
+                                        border-color: Theme.border-subtle;
+
+                                        if root.current-preset-is-builtin : Path {
+                                            width: 12px;
+                                            height: 12px;
+                                            x: (parent.width - self.width) / 2;
+                                            y: (parent.height - self.height) / 2;
+                                            commands: "M 3 6 L 9 6 L 9 11 L 3 11 Z M 4 6 L 4 4 L 8 4 L 8 6";
+                                            stroke: #94A3B8;
+                                            stroke-width: 1.4px;
+                                            fill: transparent;
+                                        }
+
+                                        if !root.current-preset-is-builtin : Path {
+                                            width: 13px;
+                                            height: 13px;
+                                            x: (parent.width - self.width) / 2;
+                                            y: (parent.height - self.height) / 2;
+                                            commands: "M 2 3 L 11 3 M 4 3 L 4 11 L 9 11 L 9 3 M 5 1 L 8 1";
+                                            stroke: del-touch.has-hover ? #DC2626 : Theme.text-muted;
+                                            stroke-width: 1.4px;
+                                            fill: transparent;
+                                        }
+
+                                        del-touch := TouchArea {
+                                            mouse-cursor: root.current-preset-is-builtin ? default : pointer;
+                                            clicked => {
+                                                if (!root.current-preset-is-builtin) {
+                                                    root.delete-preset();
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        // Sliders Card
+                        SurfaceCard {
+                            vertical-stretch: 1;
+
+                            VerticalLayout {
+                                padding: 18px;
+                                spacing: 12px;
+                                alignment: start;
+
+                                HorizontalLayout {
+                                    spacing: 24px;
+
+                                    ZenSlider {
+                                        horizontal-stretch: 1;
+                                        label: "Brightness (Black Level Lift)";
+                                        minimum: -50.0;
+                                        maximum: 50.0;
+                                        value <=> root.brightness;
+                                        value-text: (root.brightness >= 0.0 ? "+" : "") + round(root.brightness) + "%";
+                                        changed => { root.parameters-changed(); }
+                                    }
+
+                                    ZenSlider {
+                                        horizontal-stretch: 1;
+                                        label: "Contrast (Dynamic Range)";
+                                        minimum: 0.0;
+                                        maximum: 100.0;
+                                        value <=> root.contrast;
+                                        value-text: round(root.contrast) + "%";
+                                        changed => { root.parameters-changed(); }
+                                    }
+                                }
+
+                                Rectangle {
+                                    height: 1px;
+                                    background: Theme.border-subtle;
+                                }
+
+                                VerticalLayout {
+                                    spacing: 8px;
+
+                                    HorizontalLayout {
+                                        Text {
+                                            text: "GAMMA CURVE RESPONSE";
+                                            color: Theme.text-muted;
+                                            font-size: 10.5px;
+                                            font-weight: 700;
+                                            letter-spacing: 0.7px;
+                                            vertical-alignment: center;
+                                            horizontal-stretch: 1;
+                                        }
+
+                                        HorizontalLayout {
+                                            spacing: 8px;
+                                            Text {
+                                                text: "Per-Channel RGB Split";
+                                                color: Theme.text-secondary;
+                                                font-size: 11.5px;
+                                                font-weight: 600;
+                                                vertical-alignment: center;
+                                            }
+                                            ZenToggle {
+                                                checked <=> root.rgb-split-enabled;
+                                                toggled(enabled) => {
+                                                    if (enabled) {
+                                                        root.gamma-red = root.gamma;
+                                                        root.gamma-green = root.gamma;
+                                                        root.gamma-blue = root.gamma;
+                                                    }
+                                                    root.parameters-changed();
+                                                }
+                                            }
+                                        }
+                                    }
+
+                                    if !root.rgb-split-enabled : ZenSlider {
+                                        label: "Master Gamma (Night Shadow Boost)";
+                                        minimum: 0.50;
+                                        maximum: 3.00;
+                                        value <=> root.gamma;
+                                        value-text: round(root.gamma * 100.0) / 100.0 + "";
+                                        changed(v) => {
+                                            root.gamma-red = v;
+                                            root.gamma-green = v;
+                                            root.gamma-blue = v;
+                                            root.parameters-changed();
+                                        }
+                                    }
+
+                                    if root.rgb-split-enabled : HorizontalLayout {
+                                        spacing: 16px;
+
+                                        ZenSlider {
+                                            horizontal-stretch: 1;
+                                            label: "Red Gamma";
+                                            minimum: 0.50;
+                                            maximum: 3.00;
+                                            value <=> root.gamma-red;
+                                            fill-color: Theme.channel-red;
+                                            value-text: round(root.gamma-red * 100.0) / 100.0 + "";
+                                            changed => { root.parameters-changed(); }
+                                        }
+
+                                        ZenSlider {
+                                            horizontal-stretch: 1;
+                                            label: "Green Gamma";
+                                            minimum: 0.50;
+                                            maximum: 3.00;
+                                            value <=> root.gamma-green;
+                                            fill-color: Theme.channel-green;
+                                            value-text: round(root.gamma-green * 100.0) / 100.0 + "";
+                                            changed => { root.parameters-changed(); }
+                                        }
+
+                                        ZenSlider {
+                                            horizontal-stretch: 1;
+                                            label: "Blue Gamma";
+                                            minimum: 0.50;
+                                            maximum: 3.00;
+                                            value <=> root.gamma-blue;
+                                            fill-color: Theme.channel-blue;
+                                            value-text: round(root.gamma-blue * 100.0) / 100.0 + "";
+                                            changed => { root.parameters-changed(); }
+                                        }
+                                    }
+                                }
+
+                                Rectangle {
+                                    height: 1px;
+                                    background: Theme.border-subtle;
+                                }
+
+                                VerticalLayout {
+                                    spacing: 6px;
+
+                                    HorizontalLayout {
+                                        Text {
+                                            text: "COLOR SATURATION & DIGITAL VIBRANCE";
+                                            color: Theme.text-muted;
+                                            font-size: 10.5px;
+                                            font-weight: 700;
+                                            letter-spacing: 0.7px;
+                                            vertical-alignment: center;
+                                            horizontal-stretch: 1;
+                                        }
+                                        Text {
+                                            text: "0% = Grayscale  •  100% = Default  •  200% = Max Vibrance";
+                                            color: Theme.text-muted;
+                                            font-size: 10.5px;
+                                            vertical-alignment: center;
+                                        }
+                                    }
+
+                                    ZenSlider {
+                                        label: "Saturation (DWM Color Matrix + Driver Vibrance)";
+                                        minimum: 0.0;
+                                        maximum: 200.0;
+                                        value <=> root.saturation;
+                                        value-text: round(root.saturation) + "%";
+                                        changed => { root.parameters-changed(); }
+                                    }
+                                }
+                            }
+                        }
+
+                        // Bottom Action Bar
+                        HorizontalLayout {
+                            spacing: 12px;
+
+                            HorizontalLayout {
+                                spacing: 6px;
+
+                                ActionButton {
+                                    text: "Reset to Default";
+                                    icon-path: "M 2 6 L 6 2 L 6 10 Z M 6 6 L 12 6";
+                                    primary: false;
+                                    clicked => {
+                                        root.recording-hotkey = false;
+                                        root.recording-reset-hotkey = false;
+                                        root.reset-to-default();
+                                    }
+                                }
+
+                                // Reset to Default Hotkey Pill / Recorder
+                                Rectangle {
+                                    height: 32px;
+                                    y: (parent.height - self.height) / 2;
+                                    border-radius: 6px;
+                                    border-width: 1px;
+                                    border-color: root.recording-reset-hotkey ? Theme.accent-navy : Theme.border-subtle;
+                                    background: root.recording-reset-hotkey ? rgba(15, 23, 42, 0.08) : (reset-hk-touch.has-hover ? Theme.hover-glass : transparent);
+
+                                    HorizontalLayout {
+                                        padding-left: 9px;
+                                        padding-right: 9px;
+                                        spacing: 5px;
+
+                                        Path {
+                                            width: 11px;
+                                            height: 11px;
+                                            y: (parent.height - self.height) / 2;
+                                            commands: "M 1 4 L 10 4 M 1 7 L 10 7 M 4 1 L 4 10 M 7 1 L 7 10";
+                                            stroke: root.recording-reset-hotkey ? Theme.accent-navy : Theme.text-muted;
+                                            stroke-width: 1.3px;
+                                            fill: transparent;
+                                        }
+
+                                        Text {
+                                            text: root.recording-reset-hotkey ? "Press key..." : (root.reset-hotkey == "" ? "Set Hotkey" : root.reset-hotkey);
+                                            color: root.recording-reset-hotkey ? Theme.accent-navy : Theme.text-secondary;
+                                            font-size: 11px;
+                                            font-weight: 600;
+                                            vertical-alignment: center;
+                                        }
+                                    }
+
+                                    reset-hk-touch := TouchArea {
+                                        mouse-cursor: pointer;
+                                        clicked => {
+                                            root.recording-hotkey = false;
+                                            root.recording-reset-hotkey = true;
+                                            hotkey-capture-scope.focus();
+                                            root.start-record-reset-hotkey();
+                                        }
+                                    }
+                                }
+                            }
+
+                            Rectangle {
+                                horizontal-stretch: 1;
+                                background: transparent;
+                            }
+
+                            ActionButton {
+                                text: "Save Preset";
+                                icon-path: "M 2 2 L 10 2 L 12 4 L 12 12 L 2 12 Z M 4 2 L 4 6 L 9 6 L 9 2";
+                                primary: false;
+                                clicked => { root.save-preset(); }
+                            }
+
+                            ActionButton {
+                                text: "Apply Now";
+                                icon-path: "M 2 7 L 5 10 L 12 3";
+                                primary: true;
+                                clicked => { root.apply-now(); }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // =========================================================================
+        // MODAL 1: ADD / EDIT GAME PROFILE & OFFLINE ICON PICKER
+        // Positioned at y: 40px (below TitleBar) and uses `visible` instead of `if`
+        // so closing the modal never destroys active TouchAreas/Flickables mid-click!
+        // =========================================================================
+        Rectangle {
+            visible: root.show-game-modal;
+            x: root.show-game-modal ? 0px : -20000px;
+            y: 40px;
+            width: 100%;
+            height: parent.height - 40px;
+            background: rgba(15, 23, 42, 0.45);
+
+            // Clicking outside the modal card closes the modal cleanly
+            TouchArea {
+                clicked => { root.close-game-modal(); }
+            }
+
+            SurfaceCard {
+                width: 680px;
+                height: 520px;
+                x: (parent.width - self.width) / 2;
+                y: (parent.height - self.height) / 2;
+
+                // Prevent clicks inside the card from bubbling to the backdrop TouchArea
+                TouchArea {}
+
+                VerticalLayout {
+                    padding: 22px;
+                    spacing: 14px;
+
+                    // Modal Header with Close (✕) Button
+                    HorizontalLayout {
+                        spacing: 10px;
+                        Text {
+                            text: root.game-modal-is-new ? "Add New Game Profile" : "Game Profile Settings";
+                            color: Theme.text-primary;
+                            font-size: 16px;
+                            font-weight: 800;
+                            vertical-alignment: center;
+                            horizontal-stretch: 1;
+                        }
+                        Text {
+                            text: "139 Built-in Game Icons (100% Offline)";
+                            color: Theme.text-muted;
+                            font-size: 11px;
+                            vertical-alignment: center;
+                        }
+                        Rectangle {
+                            width: 28px;
+                            height: 28px;
+                            y: (parent.height - self.height) / 2;
+                            TitleBarControlBtn {
+                                width: 100%;
+                                height: 100%;
+                                is-close: true;
+                                icon-commands: "M 2 2 L 10 10 M 10 2 L 2 10";
+                                clicked => { root.close-game-modal(); }
+                            }
+                        }
+                    }
+
+                    Rectangle {
+                        height: 1px;
+                        background: Theme.border-subtle;
+                    }
+
+                    // Row: Custom Game Name + Selected Icon Preview
+                    HorizontalLayout {
+                        spacing: 14px;
+
+                        // Selected Icon Preview Box
+                        Rectangle {
+                            width: 54px;
+                            height: 54px;
+                            border-radius: 10px;
+                            background: Theme.bg-sidebar;
+                            border-width: 1px;
+                            border-color: Theme.border-subtle;
+
+                            Image {
+                                width: 34px;
+                                height: 34px;
+                                x: 10px;
+                                y: 10px;
+                                source: root.game-modal-icon-preview;
+                                image-fit: contain;
+                            }
+                        }
+
+                        VerticalLayout {
+                            spacing: 5px;
+                            horizontal-stretch: 1;
+                            alignment: center;
+
+                            Text {
+                                text: "GAME TITLE (TYPE CUSTOM NAME OR PICK FROM CATALOG BELOW)";
+                                color: Theme.text-muted;
+                                font-size: 10px;
+                                font-weight: 700;
+                                letter-spacing: 0.7px;
+                            }
+
+                            Rectangle {
+                                height: 34px;
+                                border-radius: 6px;
+                                background: Theme.bg-sidebar;
+                                border-width: 1px;
+                                border-color: gname-in.has-focus ? Theme.accent-navy : Theme.border-subtle;
+
+                                gname-in := TextInput {
+                                    x: 10px;
+                                    width: parent.width - 20px;
+                                    height: 100%;
+                                    text <=> root.game-modal-name;
+                                    color: Theme.text-primary;
+                                    font-size: 13px;
+                                    font-weight: 600;
+                                    horizontal-alignment: left;
+                                    vertical-alignment: center;
+                                }
+                            }
+                        }
+                    }
+
+                    // Split Columns: Left = Searchable Game Database, Right = Icon Picker Menu
+                    HorizontalLayout {
+                        spacing: 16px;
+                        vertical-stretch: 1;
+
+                        // Left Column: Search Offline Games Catalog
+                        VerticalLayout {
+                            spacing: 6px;
+                            horizontal-stretch: 1;
+
+                            Text {
+                                text: "1. QUICK PICK FROM GAME DATABASE";
+                                color: Theme.text-muted;
+                                font-size: 10px;
+                                font-weight: 700;
+                                letter-spacing: 0.7px;
+                            }
+
+                            Rectangle {
+                                height: 32px;
+                                border-radius: 6px;
+                                background: Theme.bg-sidebar;
+                                border-width: 1px;
+                                border-color: search-in.has-focus ? Theme.accent-navy : Theme.border-subtle;
+
+                                if root.game-modal-search == "" && !search-in.has-focus : Text {
+                                    x: 10px;
+                                    width: parent.width - 20px;
+                                    height: 100%;
+                                    text: "Search game title (e.g. Tarkov, Rust, Apex)...";
+                                    color: Theme.text-muted;
+                                    font-size: 11.5px;
+                                    horizontal-alignment: left;
+                                    vertical-alignment: center;
+                                }
+
+                                search-in := TextInput {
+                                    x: 10px;
+                                    width: parent.width - 20px;
+                                    height: 100%;
+                                    text <=> root.game-modal-search;
+                                    color: Theme.text-primary;
+                                    font-size: 12px;
+                                    horizontal-alignment: left;
+                                    vertical-alignment: center;
+                                    edited => {
+                                        cat-flick.content-y = 0px;
+                                        root.search-catalog-changed(self.text);
+                                    }
+                                }
+                            }
+
+                            cat-box := Rectangle {
+                                vertical-stretch: 1;
+                                border-radius: 7px;
+                                background: Theme.bg-sidebar;
+                                border-width: 1px;
+                                border-color: Theme.border-subtle;
+                                clip: true;
+
+                                cat-flick := Flickable {
+                                    width: parent.width;
+                                    height: parent.height;
+                                    content-width: parent.width;
+                                    content-height: max(parent.height, root.catalog-results.length * 35px + 12px);
+
+                                    for item[idx] in root.catalog-results : Rectangle {
+                                        x: 6px;
+                                        y: 6px + idx * 35px;
+                                        width: parent.width - 16px;
+                                        height: 32px;
+                                        border-radius: 5px;
+                                        background: (root.game-modal-name == item.title)
+                                            ? #E2E8F0
+                                            : (cat-touch.has-hover ? Theme.hover-glass : transparent);
+
+                                        HorizontalLayout {
+                                            padding-left: 8px;
+                                            padding-right: 8px;
+                                            spacing: 8px;
+
+                                            Image {
+                                                width: 20px;
+                                                height: 20px;
+                                                y: (parent.height - self.height) / 2;
+                                                source: item.icon;
+                                                image-fit: contain;
+                                            }
+
+                                            Text {
+                                                text: item.title;
+                                                color: Theme.text-primary;
+                                                font-size: 12px;
+                                                font-weight: 500;
+                                                vertical-alignment: center;
+                                                horizontal-stretch: 1;
+                                                overflow: elide;
+                                            }
+                                        }
+
+                                        cat-touch := TouchArea {
+                                            mouse-cursor: pointer;
+                                            clicked => {
+                                                root.game-modal-name = item.title;
+                                                root.game-modal-icon-file = item.icon-file;
+                                                root.game-modal-icon-preview = item.icon;
+                                            }
+                                        }
+                                    }
+                                }
+
+                                if root.catalog-results.length * 35px + 12px > cat-box.height : Rectangle {
+                                    x: parent.width - 5px;
+                                    y: clamp((-cat-flick.content-y / max(1px, cat-flick.content-height - cat-box.height)) * max(0px, cat-box.height - 38px), 2px, max(2px, cat-box.height - 38px));
+                                    width: 4px;
+                                    height: 36px;
+                                    border-radius: 2px;
+                                    background: #CBD5E1;
+                                }
+                            }
+                        }
+
+                        // Right Column: Visual Icon Picker Menu (Any icon for any custom game)
+                        VerticalLayout {
+                            spacing: 6px;
+                            width: 280px;
+
+                            Text {
+                                text: "2. OR CHOOSE ANY ICON FROM PACK";
+                                color: Theme.text-muted;
+                                font-size: 10px;
+                                font-weight: 700;
+                                letter-spacing: 0.7px;
+                            }
+
+                            Rectangle {
+                                height: 32px;
+                                border-radius: 6px;
+                                background: Theme.bg-sidebar;
+                                border-width: 1px;
+                                border-color: Theme.border-subtle;
+
+                                HorizontalLayout {
+                                    padding-left: 10px;
+                                    padding-right: 10px;
+                                    Text {
+                                        text: "Icon: " + root.game-modal-icon-file;
+                                        color: Theme.text-secondary;
+                                        font-size: 11px;
+                                        font-weight: 600;
+                                        vertical-alignment: center;
+                                        overflow: elide;
+                                    }
+                                }
+                            }
+
+                            ico-box := Rectangle {
+                                vertical-stretch: 1;
+                                border-radius: 7px;
+                                background: Theme.bg-sidebar;
+                                border-width: 1px;
+                                border-color: Theme.border-subtle;
+                                clip: true;
+
+                                ico-flick := Flickable {
+                                    width: parent.width;
+                                    height: parent.height;
+                                    content-width: parent.width;
+                                    content-height: max(parent.height, root.all-icons-gallery.length * 33px + 12px);
+
+                                    for icon-entry[idx] in root.all-icons-gallery : Rectangle {
+                                        x: 6px;
+                                        y: 6px + idx * 33px;
+                                        width: parent.width - 16px;
+                                        height: 30px;
+                                        border-radius: 5px;
+                                        background: (root.game-modal-icon-file == icon-entry.icon-file)
+                                            ? #E2E8F0
+                                            : (ico-touch.has-hover ? Theme.hover-glass : transparent);
+
+                                        HorizontalLayout {
+                                            padding-left: 8px;
+                                            padding-right: 8px;
+                                            spacing: 8px;
+
+                                            Image {
+                                                width: 18px;
+                                                height: 18px;
+                                                y: (parent.height - self.height) / 2;
+                                                source: icon-entry.icon;
+                                                image-fit: contain;
+                                            }
+
+                                            Text {
+                                                text: icon-entry.title;
+                                                color: Theme.text-secondary;
+                                                font-size: 11.5px;
+                                                vertical-alignment: center;
+                                                horizontal-stretch: 1;
+                                                overflow: elide;
+                                            }
+                                        }
+
+                                        ico-touch := TouchArea {
+                                            mouse-cursor: pointer;
+                                            clicked => {
+                                                root.game-modal-icon-file = icon-entry.icon-file;
+                                                root.game-modal-icon-preview = icon-entry.icon;
+                                            }
+                                        }
+                                    }
+                                }
+
+                                if root.all-icons-gallery.length * 33px + 12px > ico-box.height : Rectangle {
+                                    x: parent.width - 5px;
+                                    y: clamp((-ico-flick.content-y / max(1px, ico-flick.content-height - ico-box.height)) * max(0px, ico-box.height - 38px), 2px, max(2px, ico-box.height - 38px));
+                                    width: 4px;
+                                    height: 36px;
+                                    border-radius: 2px;
+                                    background: #CBD5E1;
+                                }
+                            }
+                        }
+                    }
+
+                    Rectangle {
+                        height: 1px;
+                        background: Theme.border-subtle;
+                    }
+
+                    // Modal Footer Actions
+                    HorizontalLayout {
+                        spacing: 10px;
+
+                        if !root.game-modal-is-new && root.games.length > 1 : ActionButton {
+                            text: "Delete Profile";
+                            danger: true;
+                            clicked => { root.delete-game-modal(); }
+                        }
+
+                        Rectangle {
+                            horizontal-stretch: 1;
+                            background: transparent;
+                        }
+
+                        ActionButton {
+                            text: "Cancel";
+                            primary: false;
+                            clicked => { root.close-game-modal(); }
+                        }
+
+                        ActionButton {
+                            text: root.game-modal-is-new ? "Add Game" : "Save Changes";
+                            primary: true;
+                            clicked => { root.save-game-modal(); }
+                        }
+                    }
+                }
+            }
+        }
+
+        // =========================================================================
+        // MODAL 2: APPLICATION SETTINGS (Close-to-Tray, Windows Autostart)
+        // =========================================================================
+        Rectangle {
+            visible: root.show-settings-modal;
+            x: root.show-settings-modal ? 0px : -20000px;
+            y: 40px;
+            width: 100%;
+            height: parent.height - 40px;
+            background: rgba(15, 23, 42, 0.45);
+
+            TouchArea {
+                clicked => { root.save-app-settings(); }
+            }
+
+            SurfaceCard {
+                width: 500px;
+                height: 360px;
+                x: (parent.width - self.width) / 2;
+                y: (parent.height - self.height) / 2;
+
+                TouchArea {}
+
+                VerticalLayout {
+                    padding: 22px;
+                    spacing: 16px;
+
+                    HorizontalLayout {
+                        Text {
+                            text: "Application Settings";
+                            color: Theme.text-primary;
+                            font-size: 16px;
+                            font-weight: 800;
+                            vertical-alignment: center;
+                            horizontal-stretch: 1;
+                        }
+                        Rectangle {
+                            width: 28px;
+                            height: 28px;
+                            y: (parent.height - self.height) / 2;
+                            TitleBarControlBtn {
+                                width: 100%;
+                                height: 100%;
+                                is-close: true;
+                                icon-commands: "M 2 2 L 10 10 M 10 2 L 2 10";
+                                clicked => { root.save-app-settings(); }
+                            }
+                        }
+                    }
+
+                    Rectangle {
+                        height: 1px;
+                        background: Theme.border-subtle;
+                    }
+
+                    // Toggle 1: Close Button Behavior
+                    HorizontalLayout {
+                        spacing: 14px;
+                        VerticalLayout {
+                            horizontal-stretch: 1;
+                            spacing: 2px;
+                            Text {
+                                text: "Close Button (X) Minimizes to System Tray";
+                                color: Theme.text-primary;
+                                font-size: 13px;
+                                font-weight: 600;
+                            }
+                            Text {
+                                text: "Keep ZenGamma and hotkeys running at 0% CPU when clicking Close (X)";
+                                color: Theme.text-muted;
+                                font-size: 11px;
+                            }
+                        }
+                        Rectangle {
+                            width: 38px;
+                            height: 20px;
+                            y: (parent.height - self.height) / 2;
+                            ZenToggle {
+                                checked <=> root.setting-close-to-tray;
+                            }
+                        }
+                    }
+
+                    // Toggle 2: Windows Autostart
+                    HorizontalLayout {
+                        spacing: 14px;
+                        VerticalLayout {
+                            horizontal-stretch: 1;
+                            spacing: 2px;
+                            Text {
+                                text: "Launch ZenGamma on Windows Startup";
+                                color: Theme.text-primary;
+                                font-size: 13px;
+                                font-weight: 600;
+                            }
+                            Text {
+                                text: "Registers ZenGamma in HKCU\\...\\CurrentVersion\\Run";
+                                color: Theme.text-muted;
+                                font-size: 11px;
+                            }
+                        }
+                        Rectangle {
+                            width: 38px;
+                            height: 20px;
+                            y: (parent.height - self.height) / 2;
+                            ZenToggle {
+                                checked <=> root.setting-autostart;
+                            }
+                        }
+                    }
+
+                    // Toggle 3: Start Minimized
+                    HorizontalLayout {
+                        spacing: 14px;
+                        VerticalLayout {
+                            horizontal-stretch: 1;
+                            spacing: 2px;
+                            Text {
+                                text: "Start Minimized in System Tray";
+                                color: Theme.text-primary;
+                                font-size: 13px;
+                                font-weight: 600;
+                            }
+                            Text {
+                                text: "Hide main window automatically when launched";
+                                color: Theme.text-muted;
+                                font-size: 11px;
+                            }
+                        }
+                        Rectangle {
+                            width: 38px;
+                            height: 20px;
+                            y: (parent.height - self.height) / 2;
+                            ZenToggle {
+                                checked <=> root.setting-start-minimized;
+                            }
+                        }
+                    }
+
+                    // Setting 4: Global Hotkey for Reset to Default
+                    HorizontalLayout {
+                        spacing: 14px;
+                        VerticalLayout {
+                            horizontal-stretch: 1;
+                            spacing: 2px;
+                            Text {
+                                text: "Global Hotkey for \"Reset to Default\"";
+                                color: Theme.text-primary;
+                                font-size: 13px;
+                                font-weight: 600;
+                            }
+                            Text {
+                                text: "Restores calibrated Windows display color & gamma instantly from anywhere";
+                                color: Theme.text-muted;
+                                font-size: 11px;
+                            }
+                        }
+                        Rectangle {
+                            height: 28px;
+                            y: (parent.height - self.height) / 2;
+                            border-radius: 6px;
+                            border-width: 1px;
+                            border-color: root.recording-reset-hotkey ? Theme.accent-navy : Theme.border-subtle;
+                            background: root.recording-reset-hotkey ? rgba(15, 23, 42, 0.08) : #FFFFFF;
+
+                            HorizontalLayout {
+                                padding-left: 10px;
+                                padding-right: 10px;
+                                Text {
+                                    text: root.recording-reset-hotkey ? "Press key..." : (root.reset-hotkey == "" ? "None" : root.reset-hotkey);
+                                    color: root.recording-reset-hotkey ? Theme.accent-navy : Theme.text-primary;
+                                    font-size: 11.5px;
+                                    font-weight: 600;
+                                    vertical-alignment: center;
+                                }
+                            }
+
+                            TouchArea {
+                                mouse-cursor: pointer;
+                                clicked => {
+                                    root.recording-hotkey = false;
+                                    root.recording-reset-hotkey = true;
+                                    hotkey-capture-scope.focus();
+                                    root.start-record-reset-hotkey();
+                                }
+                            }
+                        }
+                    }
+
+                    Rectangle {
+                        vertical-stretch: 1;
+                        border-radius: 6px;
+                        background: Theme.bg-sidebar;
+                        border-width: 1px;
+                        border-color: Theme.border-subtle;
+
+                        HorizontalLayout {
+                            padding-left: 12px;
+                            padding-right: 12px;
+                            Text {
+                                text: "User Data File: " + root.presets-file-path-label;
+                                color: Theme.text-muted;
+                                font-size: 11px;
+                                vertical-alignment: center;
+                                overflow: elide;
+                            }
+                        }
+                    }
+
+                    HorizontalLayout {
+                        spacing: 10px;
+                        Rectangle { horizontal-stretch: 1; }
+                        ActionButton {
+                            text: "Save & Close";
+                            primary: true;
+                            clicked => { root.save-app-settings(); }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+// =========================================================================
+// STANDALONE GRAPHICAL INSTALLER WINDOW (ZenGamma-Setup.exe)
+// =========================================================================
+export component InstallerWindow inherits Window {
+    title: "ZenGamma Setup";
+    icon: @image-url("app_icon.png");
+    no-frame: true;
+    width: 540px;
+    height: 410px;
+    background: Theme.bg-main;
+
+    in-out property <string> install-dir: "C:\\Users\\Public\\ZenGamma";
+    in-out property <bool> opt-desktop-shortcut: true;
+    in-out property <bool> opt-start-menu: true;
+    in-out property <bool> opt-autostart: false;
+    in-out property <bool> opt-launch-now: true;
+    in-out property <string> status-text: "Ready to install ZenGamma v0.2 and 139 offline game icons.";
+    in-out property <bool> install-finished: false;
+
+    callback drag-installer();
+    callback drag-installer-move();
+    callback drag-installer-end();
+    callback run-install();
+    callback close-installer();
+
+    Rectangle {
+        width: 100%;
+        height: 100%;
+        background: Theme.bg-main;
+        border-width: 1px;
+        border-color: #CBD5E1;
+
+        VerticalLayout {
+            // Custom Installer Header
+            Rectangle {
+                height: 42px;
+                background: Theme.bg-sidebar;
+
+                TouchArea {
+                    moved => {
+                        if (self.pressed) {
+                            root.drag-installer-move();
+                        }
+                    }
+                    pointer-event(event) => {
+                        if (event.button == PointerEventButton.left) {
+                            if (event.kind == PointerEventKind.down) {
+                                root.drag-installer();
+                            } else if (event.kind == PointerEventKind.up || event.kind == PointerEventKind.cancel) {
+                                root.drag-installer-end();
+                            }
+                        }
+                    }
+                }
+
+                HorizontalLayout {
+                    padding-left: 14px;
+                    padding-right: 10px;
+
+                    HorizontalLayout {
+                        spacing: 9px;
+                        alignment: start;
+                        horizontal-stretch: 1;
+
+                        Rectangle {
+                            width: 24px;
+                            height: 24px;
+                            y: (parent.height - self.height) / 2;
+                            border-radius: 6px;
+                            background: Theme.accent-navy;
+
+                            Path {
+                                width: 13px;
+                                height: 13px;
+                                x: 5.5px;
+                                y: 5.5px;
+                                commands: "M 2 12 L 6 4 L 10 9 L 14 2";
+                                stroke: #FFFFFF;
+                                stroke-width: 2px;
+                                fill: transparent;
+                            }
+                        }
+
+                        Text {
+                            text: "ZEN GAMMA INSTALLER";
+                            color: Theme.text-primary;
+                            font-size: 12.5px;
+                            font-weight: 800;
+                            vertical-alignment: center;
+                        }
+                    }
+
+                    Rectangle {
+                        width: 32px;
+                        height: 28px;
+                        y: (parent.height - self.height) / 2;
+                        TitleBarControlBtn {
+                            width: 100%;
+                            height: 100%;
+                            is-close: true;
+                            icon-commands: "M 2 2 L 10 10 M 10 2 L 2 10";
+                            clicked => { root.close-installer(); }
+                        }
+                    }
+                }
+
+                Rectangle {
+                    y: parent.height - 1px;
+                    width: 100%;
+                    height: 1px;
+                    background: Theme.border-subtle;
+                }
+            }
+
+            VerticalLayout {
+                padding: 22px;
+                spacing: 14px;
+                vertical-stretch: 1;
+
+                SurfaceCard {
+                    vertical-stretch: 1;
+
+                    VerticalLayout {
+                        padding: 18px;
+                        spacing: 12px;
+
+                        Text {
+                            text: "INSTALLATION DIRECTORY";
+                            color: Theme.text-muted;
+                            font-size: 10px;
+                            font-weight: 700;
+                            letter-spacing: 0.7px;
+                        }
+
+                        Rectangle {
+                            height: 34px;
+                            border-radius: 6px;
+                            background: Theme.bg-sidebar;
+                            border-width: 1px;
+                            border-color: Theme.border-subtle;
+
+                            HorizontalLayout {
+                                padding-left: 10px;
+                                padding-right: 10px;
+                                TextInput {
+                                    text <=> root.install-dir;
+                                    color: Theme.text-primary;
+                                    font-size: 12px;
+                                    font-weight: 600;
+                                    vertical-alignment: center;
+                                }
+                            }
+                        }
+
+                        Rectangle {
+                            height: 1px;
+                            background: Theme.border-subtle;
+                        }
+
+                        HorizontalLayout {
+                            Text {
+                                text: "Create Desktop Shortcut (.lnk)";
+                                color: Theme.text-primary;
+                                font-size: 12.5px;
+                                font-weight: 500;
+                                vertical-alignment: center;
+                                horizontal-stretch: 1;
+                            }
+                            ZenToggle { checked <=> root.opt-desktop-shortcut; }
+                        }
+
+                        HorizontalLayout {
+                            Text {
+                                text: "Create Start Menu Shortcut";
+                                color: Theme.text-primary;
+                                font-size: 12.5px;
+                                font-weight: 500;
+                                vertical-alignment: center;
+                                horizontal-stretch: 1;
+                            }
+                            ZenToggle { checked <=> root.opt-start-menu; }
+                        }
+
+                        HorizontalLayout {
+                            Text {
+                                text: "Start ZenGamma Automatically with Windows";
+                                color: Theme.text-primary;
+                                font-size: 12.5px;
+                                font-weight: 500;
+                                vertical-alignment: center;
+                                horizontal-stretch: 1;
+                            }
+                            ZenToggle { checked <=> root.opt-autostart; }
+                        }
+
+                        HorizontalLayout {
+                            Text {
+                                text: "Launch ZenGamma After Installation";
+                                color: Theme.text-primary;
+                                font-size: 12.5px;
+                                font-weight: 500;
+                                vertical-alignment: center;
+                                horizontal-stretch: 1;
+                            }
+                            ZenToggle { checked <=> root.opt-launch-now; }
+                        }
+
+                        Rectangle { vertical-stretch: 1; }
+
+                        Text {
+                            text: root.status-text;
+                            color: root.install-finished ? Theme.status-online : Theme.text-muted;
+                            font-size: 11.5px;
+                            font-weight: 600;
+                            overflow: elide;
+                        }
+                    }
+                }
+
+                HorizontalLayout {
+                    spacing: 10px;
+                    Rectangle { horizontal-stretch: 1; }
+
+                    ActionButton {
+                        text: root.install-finished ? "Close" : "Cancel";
+                        primary: false;
+                        clicked => { root.close-installer(); }
+                    }
+
+                    if !root.install-finished : ActionButton {
+                        text: "Install ZenGamma";
+                        icon-path: "M 2 7 L 5 10 L 12 3";
+                        primary: true;
+                        clicked => { root.run-install(); }
+                    }
+                }
+            }
+        }
+    }
+}
