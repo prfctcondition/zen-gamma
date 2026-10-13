@@ -96,30 +96,29 @@ Instead of intercepting game memory or hooking graphics APIs, **Zen Gamma commun
 
 ---
 
-## ✦ Competitive Tactical Presets Matrix
+## ✦ Tactical Presets & Infinite Customization
 
-| Game Profile | Preset Name | Hotkey | Calibration Profile & Tactical Objective |
-| :--- | :--- | :---: | :--- |
-| **Escape from Tarkov** | `[ULTRA EXTREME] Zero-Light Abyss` | `Ctrl+F1` | **Gamma 3.00 (RGB Split) / Brightness +50% / Contrast 95% / Vibrance 170%**<br />*Pierces pitch-black woods and unlit Interchange/Reserve sublevels without NVG goggles.* |
-| | `[Night No-NVG] Pitch-Black Customs & Woods` | `Ctrl+F2` | **Gamma 2.65 / Brightness +35% / Contrast 90%**<br />*Deep shadow floor elevation; turns night into manageable overcast twilight.* |
-| | `[Night No-NVG] Moonlit Factory & Shoreline` | `Ctrl+F3` | **Gamma 2.20 / Brightness +20% / Vibrance 145%**<br />*Balanced low-light clarity; preserves midtones around sodium lighting.* |
-| | `[Indoor / Bunker] Interchange & Reserve` | `Ctrl+F4` | **Gamma 2.40 / Red Boost / Brightness +30%**<br />*Cuts through volumetric dust and fluorescent light haze in underground bunkers.* |
-| | `[Dusk / Dawn] Sunrise & Sunset Glare` | `Ctrl+F5` | **Gamma 1.95 / Contrast 105% / Saturation 130%**<br />*Glare reduction; balances high-angle solar blinding.* |
-| | `[Daylight] Clear Sunny Visibility & Foliage` | `Ctrl+F6` | **Gamma 1.40 / Dynamic Range 100% / Vibrance 160%**<br />*PMCs and scavs pop against dense forest bushes and terrain.* |
-| | `[Weather] Heavy Fog, Rain & Overcast` | `Ctrl+F7` | **High Contrast / Blue Lift / Saturation 150%**<br />*Penetrates heavy atmospheric fog banks and rain sheet desaturation.* |
-| **Hunt: Showdown 1896** | `[PvP] Night Map Hunter Spotting` | `Ctrl+F1` | **Gamma 2.60 / Brightness +35% / Vibrance 155%**<br />*Illuminates Bayou swamps and bay window sniper nests during night contracts.* |
-| | `[PvP] Heavy Fog & Ash Bloom Penetration` | `Ctrl+F2` | **Contrast 110% / Gamma 2.10 / Vibrance 140%**<br />*Cuts through dense swamp mist and ash bloom.* |
-| | `[Underground] Catacombs & Pitch Cellars` | `Ctrl+F3` | **Gamma 2.80 / Brightness +45% / Contrast 85%**<br />*Maximum black floor lift for boss lairs and underground church crypts.* |
-| | `[Color Boost] High Dynamic Range` | `Ctrl+F4` | **Gamma 1.50 / Saturation 180%**<br />*Extreme digital vibrance for fast target recognition in dense vegetation.* |
-| **Arma 3 / Arma Reforger** | `[Tactical] Pitch-Black Night Ops (No NVG)` | `Ctrl+F1` | **Gamma 2.75 / Brightness +40% / Vibrance 150%**<br />*Full terrain navigation visibility across Everon / Altis without NVG grain.* |
-| | `[Tactical] Dense Woodland / Forest Penetration` | `Ctrl+F2` | **Gamma 2.10 / Red & Blue Gamma Offset / Vibrance 165%**<br />*Isolates camouflaged player uniforms against treelines.* |
-| | `[Thermal Emulation] High Contrast Shadow Piercer` | `Ctrl+F3` | **High Dynamic Range / Brightness +25% / Contrast 120%**<br />*Exaggerates edge contrast between enemy silhouettes and terrain.* |
-| **DayZ** | `[ULTRA EXTREME] Zero-Light 1PP Night Abyss` | `Ctrl+F1` | **Gamma 3.00 / Brightness +50% / Contrast 95% / Vibrance 165%**<br />*Hardcore 1PP night server survival; reveals buildings, infected, and players in zero ambient light.* |
-| | `[Tryhard] Pitch Black 1PP Night Vision` | `Ctrl+F2` | **Gamma 2.50 / Brightness +35% / Vibrance 140%**<br />*Night navigation with preserved contrast balance.* |
-| | `[Tryhard] Overcast Rain & Fog Piercer` | `Ctrl+F3` | **Gamma 2.05 / Contrast 105% / Vibrance 155%**<br />*Penetrates gloomy Chernarus storms and heavy coastal rain.* |
-| | `[PvP] NWAF & Tisy High Visibility` | `Ctrl+F4` | **Gamma 1.70 / Brightness +15% / Vibrance 175%**<br />*Maximum military airfield clarity for long-range sniper spotting.* |
-| | `[Beautiful] Autumn Chernarus Dynamic Vibrance` | `Ctrl+F5` | **Gamma 1.25 / Vibrance 185%**<br />*Rich cinematic saturation for pristine autumn landscapes.* |
-| | `[Cinematic] Post-Apocalyptic High Contrast` | `Ctrl+F6` | **Gamma 1.10 / Contrast 115% / Vibrance 120%**<br />*Atmospheric survival aesthetic with sharp contrast.* |
+> *Pre-configured for legendary tactical shooters — engineered for instant situational dominance.*
+
+Zen Gamma comes out-of-the-box with fine-tuned presets tailored for hardcore environments in **Escape from Tarkov**, **DayZ**, **Hunt: Showdown 1896**, and **Arma 3 / Arma Reforger**:
+
+- **Moonlit & Pitch-Black Night Piercing**: Elevates black levels and deep shadow floors to turn pitch-black darkness into clear, manageable twilight. Navigate dense forests, open fields, and pitch-black night servers without bulky NVGs—completely free of phosphor bloom, visual grain, and tunnel vision.
+- **Underground Bunkers & Shadow Crypts**: Cuts through dense darkness, volumetric dust, and harsh contrast drop-offs inside underground complexes, catacombs, and unlit room corners.
+- **Atmospheric Weather & Overcast Penetration**: Balances color depth to pierce heavy rain sheets, dense fog banks, and harsh sunrise glare, keeping enemy silhouettes sharply distinguished from the terrain.
+
+---
+
+### ✧ Sculpt Your Own Calibration Profiles
+
+Every display panel, room lighting environment, and player preference is different. Zen Gamma offers complete, unconstrained control to shape your visual feed:
+
+- **Create Unlimited Custom Presets**: Add bespoke presets to any game tab and assign dedicated global hotkeys (`Ctrl+F1`–`Ctrl+F12`) for instant mid-firefight switching.
+- **Surgical Calibration Controls**:
+  - **Black Level Lift (Brightness)**: Elevate compressed shadow tones without washing out midtones or blowing out highlights.
+  - **Dynamic Range (Contrast)**: Sharpen silhouette edges and separate camouflaged player models from dense background foliage.
+  - **Independent RGB Gamma Split**: Fine-tune Red, Green, and Blue gamma response curves discretely to counteract game-specific color tinting (e.g. heavy green hues or tinted night shaders).
+  - **Digital Vibrance & Color Saturation**: Boost saturation up to **200%** via hardware DWM and driver pipelines for instantaneous peripheral target acquisition.
+- **Fluid Drag & Drop Management**: Organize and prioritize games and presets effortlessly using smooth, zero-jitter drag-and-drop reordering.
 
 ---
 
