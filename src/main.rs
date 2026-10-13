@@ -880,6 +880,29 @@ fn main() -> Result<(), slint::PlatformError> {
         });
     }
 
+    // --- Callback: Clear Preset Hotkey ---
+    {
+        let ui_weak = ui.as_weak();
+        let state_arc = Arc::clone(&state);
+        ui.on_clear_current_hotkey(move || {
+            let Some(ui) = ui_weak.upgrade() else { return };
+            ui.set_recording_hotkey(false);
+            let Ok(mut st) = state_arc.lock() else { return };
+            let g_idx = st.config.active_game_idx;
+            let p_idx = st.config.active_preset_idx;
+            if let Some(game) = st.config.games.get_mut(g_idx) {
+                if let Some(preset) = game.presets.get_mut(p_idx) {
+                    preset.hotkey.clear();
+                }
+            }
+            let _ = st.config.save();
+            if let Some(ref bg) = st.bg_services {
+                bg.sync_hotkeys_from_config(&st.config);
+            }
+            sync_ui_from_state(&ui, &st);
+        });
+    }
+
     // --- Callback: Start Recording Reset to Default Hotkey ---
     {
         let ui_weak = ui.as_weak();
@@ -913,6 +936,24 @@ fn main() -> Result<(), slint::PlatformError> {
                     sync_ui_from_state(&ui, &st);
                 }
             }
+        });
+    }
+
+    // --- Callback: Clear Reset to Default Hotkey ---
+    {
+        let ui_weak = ui.as_weak();
+        let state_arc = Arc::clone(&state);
+        ui.on_clear_reset_hotkey(move || {
+            let Some(ui) = ui_weak.upgrade() else { return };
+            ui.set_recording_reset_hotkey(false);
+            let Ok(mut st) = state_arc.lock() else { return };
+            st.config.settings.reset_hotkey.clear();
+            ui.set_reset_hotkey(SharedString::from(""));
+            let _ = st.config.save();
+            if let Some(ref bg) = st.bg_services {
+                bg.sync_hotkeys_from_config(&st.config);
+            }
+            sync_ui_from_state(&ui, &st);
         });
     }
 
