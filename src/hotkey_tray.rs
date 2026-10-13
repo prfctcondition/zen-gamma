@@ -96,7 +96,40 @@ impl Drop for BackgroundServices {
     }
 }
 
-/// Converts a Slint `KeyEvent` into a canonical hotkey string (e.g. `"Ctrl+F1"`, `"Alt+G"`, `"F4"`).
+/// Maps a Cyrillic character to its corresponding Latin QWERTY physical key.
+fn map_cyrillic_to_latin(c: char) -> Option<char> {
+    match c {
+        'й' | 'Й' => Some('Q'),
+        'ц' | 'Ц' => Some('W'),
+        'у' | 'У' => Some('E'),
+        'к' | 'К' => Some('R'),
+        'е' | 'Е' => Some('T'),
+        'н' | 'Н' => Some('Y'),
+        'г' | 'Г' => Some('U'),
+        'ш' | 'Ш' => Some('I'),
+        'щ' | 'Щ' => Some('O'),
+        'з' | 'З' => Some('P'),
+        'ф' | 'Ф' => Some('A'),
+        'ы' | 'Ы' => Some('S'),
+        'в' | 'В' => Some('D'),
+        'а' | 'А' => Some('F'),
+        'п' | 'П' => Some('G'),
+        'р' | 'Р' => Some('H'),
+        'о' | 'О' => Some('J'),
+        'л' | 'Л' => Some('K'),
+        'д' | 'Д' => Some('L'),
+        'я' | 'Я' => Some('Z'),
+        'ч' | 'Ч' => Some('X'),
+        'с' | 'С' => Some('C'),
+        'м' | 'М' => Some('V'),
+        'и' | 'И' => Some('B'),
+        'т' | 'Т' => Some('N'),
+        'ь' | 'Ь' => Some('M'),
+        _ => None,
+    }
+}
+
+/// Converts a Slint `KeyEvent` into a canonical hotkey string (e.g. `"Ctrl+F1"`, `"Alt+G"`, `"F4"`, `"Home"`).
 /// Returns:
 /// - `Some(Ok(hotkey_string))` when a valid main key was pressed (empty string `""` means cleared via Backspace/Delete)
 /// - `Some(Err(()))` when `Escape` was pressed (cancel recording without modifying)
@@ -151,6 +184,9 @@ pub fn format_captured_key_event(
         '\u{f72c}' => "PageUp".to_string(),
         '\u{f72d}' => "PageDown".to_string(),
         c if c.is_ascii_alphanumeric() => c.to_ascii_uppercase().to_string(),
+        c if map_cyrillic_to_latin(c).is_some() => {
+            map_cyrillic_to_latin(c).unwrap().to_string()
+        }
         c if matches!(c, '-' | '=' | '[' | ']' | '\\' | ';' | '\'' | ',' | '.' | '/' | '`') => {
             c.to_string()
         }
@@ -173,7 +209,7 @@ pub fn format_captured_key_event(
     Some(Ok(parts.join("+")))
 }
 
-/// Parses a human-readable hotkey string (e.g. `"Ctrl+F1"`, `"Alt+X"`, `"Shift+1"`, `"F5"`) into Win32 modifiers + VK code.
+/// Parses a human-readable hotkey string (e.g. `"Ctrl+F1"`, `"Alt+X"`, `"Shift+1"`, `"F5"`, `"Home"`) into Win32 modifiers + VK code.
 #[cfg(windows)]
 fn parse_hotkey_string(hotkey: &str) -> Option<(HOT_KEY_MODIFIERS, u32)> {
     let trimmed = hotkey.trim();
@@ -201,6 +237,16 @@ fn parse_hotkey_string(hotkey: &str) -> Option<(HOT_KEY_MODIFIERS, u32)> {
             "F10" => vk_code = Some(VK_F10.0 as u32),
             "F11" => vk_code = Some(VK_F11.0 as u32),
             "F12" => vk_code = Some(VK_F12.0 as u32),
+            "NUMPAD0" | "NUM0" => vk_code = Some(0x60),
+            "NUMPAD1" | "NUM1" => vk_code = Some(0x61),
+            "NUMPAD2" | "NUM2" => vk_code = Some(0x62),
+            "NUMPAD3" | "NUM3" => vk_code = Some(0x63),
+            "NUMPAD4" | "NUM4" => vk_code = Some(0x64),
+            "NUMPAD5" | "NUM5" => vk_code = Some(0x65),
+            "NUMPAD6" | "NUM6" => vk_code = Some(0x66),
+            "NUMPAD7" | "NUM7" => vk_code = Some(0x67),
+            "NUMPAD8" | "NUM8" => vk_code = Some(0x68),
+            "NUMPAD9" | "NUM9" => vk_code = Some(0x69),
             "SPACE" => vk_code = Some(VK_SPACE.0 as u32),
             "TAB" => vk_code = Some(VK_TAB.0 as u32),
             "BACKSPACE" => vk_code = Some(VK_BACK.0 as u32),
@@ -230,6 +276,8 @@ fn parse_hotkey_string(hotkey: &str) -> Option<(HOT_KEY_MODIFIERS, u32)> {
                 if ch.is_ascii_alphanumeric() {
                     // Win32 VK codes for '0'..='9' (0x30..=0x39) and 'A'..='Z' (0x41..=0x5A) match ASCII uppercase
                     vk_code = Some(ch as u32);
+                } else if let Some(mapped) = map_cyrillic_to_latin(ch) {
+                    vk_code = Some(mapped as u32);
                 }
             }
             _ => {}

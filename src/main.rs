@@ -103,15 +103,27 @@ fn sync_ui_from_state(ui: &AppWindow, state: &AppState) {
             preset.hotkey.as_str()
         }));
 
-        let v = &preset.values;
-        ui.set_brightness(v.brightness);
-        ui.set_contrast(v.contrast);
-        ui.set_gamma(v.gamma);
-        ui.set_rgb_split_enabled(v.rgb_split);
-        ui.set_gamma_red(v.gamma_r);
-        ui.set_gamma_green(v.gamma_g);
-        ui.set_gamma_blue(v.gamma_b);
-        ui.set_saturation(v.saturation);
+        if state.applied_target.is_some() {
+            let v = &preset.values;
+            ui.set_brightness(v.brightness);
+            ui.set_contrast(v.contrast);
+            ui.set_gamma(v.gamma);
+            ui.set_rgb_split_enabled(v.rgb_split);
+            ui.set_gamma_red(v.gamma_r);
+            ui.set_gamma_green(v.gamma_g);
+            ui.set_gamma_blue(v.gamma_b);
+            ui.set_saturation(v.saturation);
+        } else {
+            let def = DisplayValues::default();
+            ui.set_brightness(def.brightness);
+            ui.set_contrast(def.contrast);
+            ui.set_gamma(def.gamma);
+            ui.set_rgb_split_enabled(def.rgb_split);
+            ui.set_gamma_red(def.gamma_r);
+            ui.set_gamma_green(def.gamma_g);
+            ui.set_gamma_blue(def.gamma_b);
+            ui.set_saturation(def.saturation);
+        }
     }
 
     // Update active profile status banner
@@ -129,7 +141,7 @@ fn sync_ui_from_state(ui: &AppWindow, state: &AppState) {
     }
 
     ui.set_profile_engaged(false);
-    ui.set_active_profile_label(SharedString::from("Reset to Default"));
+    ui.set_active_profile_label(SharedString::from("Default Monitor"));
 }
 
 /// Populates the offline catalog search results inside the Game Editor Modal.
@@ -928,27 +940,6 @@ fn main() -> Result<(), slint::PlatformError> {
                 bg.sync_hotkeys_from_config(&st.config);
             }
             sync_ui_from_state(&ui, &st);
-        });
-    }
-
-    // --- Callback: Apply Now ---
-    {
-        let ui_weak = ui.as_weak();
-        let state_arc = Arc::clone(&state);
-        ui.on_apply_now(move || {
-            let Some(ui) = ui_weak.upgrade() else { return };
-            let values = read_values_from_ui(&ui);
-            let Ok(mut st) = state_arc.lock() else { return };
-            let g_idx = st.config.active_game_idx;
-            let p_idx = st.config.active_preset_idx;
-
-            if let Some(preset) = st.config.games[g_idx].presets.get_mut(p_idx) {
-                preset.values = values;
-            }
-            if st.display.apply_values(&values).is_ok() {
-                st.applied_target = Some((g_idx, p_idx));
-                sync_ui_from_state(&ui, &st);
-            }
         });
     }
 

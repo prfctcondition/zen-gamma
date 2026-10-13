@@ -16,30 +16,80 @@ slint::include_modules!();
 include!(concat!(env!("OUT_DIR"), "/bundled_assets.rs"));
 include!(concat!(env!("OUT_DIR"), "/bundled_exe.rs"));
 
-/// Creates a Windows `.lnk` shortcut using PowerShell `WScript.Shell`.
+/// Creates a Windows `.lnk` shortcut using VBScript / PowerShell.
 fn create_shortcut(lnk_path: &Path, target_exe: &Path, work_dir: &Path) {
-    let script = format!(
-        "$ws = New-Object -ComObject WScript.Shell; \
-         $s = $ws.CreateShortcut('{}'); \
-         $s.TargetPath = '{}'; \
-         $s.WorkingDirectory = '{}'; \
-         $s.IconLocation = '{},0'; \
-         $s.Description = 'ZenGamma — Display & Color Profile Manager'; \
-         $s.Save()",
-        lnk_path.to_string_lossy().replace('\'', "''"),
-        target_exe.to_string_lossy().replace('\'', "''"),
-        work_dir.to_string_lossy().replace('\'', "''"),
-        target_exe.to_string_lossy().replace('\'', "''"),
+    if let Some(parent) = lnk_path.parent() {
+        let _ = fs::create_dir_all(parent);
+    }
+
+    let target_clean = target_exe
+        .to_string_lossy()
+        .trim_start_matches(r"\\?\")
+        .to_string();
+    let work_clean = work_dir
+        .to_string_lossy()
+        .trim_start_matches(r"\\?\")
+        .to_string();
+    let lnk_clean = lnk_path
+        .to_string_lossy()
+        .trim_start_matches(r"\\?\")
+        .to_string();
+
+    // 1. Direct WScript.Shell via temporary .vbs executed by wscript.exe
+    let temp_vbs = std::env::temp_dir().join(format!("zengamma_shortcut_{}.vbs", std::process::id()));
+    let vbs_code = format!(
+        "Set ws = CreateObject(\"WScript.Shell\")\r\n\
+         Set s = ws.CreateShortcut(\"{}\")\r\n\
+         s.TargetPath = \"{}\"\r\n\
+         s.WorkingDirectory = \"{}\"\r\n\
+         s.IconLocation = \"{},0\"\r\n\
+         s.Description = \"ZenGamma — Display & Color Profile Manager\"\r\n\
+         s.Save\r\n",
+        lnk_clean.replace('"', "\"\""),
+        target_clean.replace('"', "\"\""),
+        work_clean.replace('"', "\"\""),
+        target_clean.replace('"', "\"\""),
     );
 
     #[cfg(windows)]
     {
         use std::os::windows::process::CommandExt;
         const CREATE_NO_WINDOW: u32 = 0x08000000;
-        let _ = Command::new("powershell")
-            .creation_flags(CREATE_NO_WINDOW)
-            .args(["-NoProfile", "-NonInteractive", "-Command", &script])
-            .status();
+
+        if fs::write(&temp_vbs, vbs_code).is_ok() {
+            let _ = Command::new("wscript.exe")
+                .creation_flags(CREATE_NO_WINDOW)
+                .arg(&temp_vbs)
+                .status();
+            let _ = fs::remove_file(&temp_vbs);
+        }
+
+        // 2. Fallback to PowerShell if shortcut was not written
+        if !lnk_path.exists() {
+            let ps_script = format!(
+                "$ws = New-Object -ComObject WScript.Shell; \
+                 $s = $ws.CreateShortcut('{}'); \
+                 $s.TargetPath = '{}'; \
+                 $s.WorkingDirectory = '{}'; \
+                 $s.IconLocation = '{},0'; \
+                 $s.Description = 'ZenGamma — Display & Color Profile Manager'; \
+                 $s.Save()",
+                lnk_clean.replace('\'', "''"),
+                target_clean.replace('\'', "''"),
+                work_clean.replace('\'', "''"),
+                target_clean.replace('\'', "''"),
+            );
+            let _ = Command::new("powershell")
+                .creation_flags(CREATE_NO_WINDOW)
+                .args(["-NoProfile", "-NonInteractive", "-Command", &ps_script])
+                .status();
+        }
+    }
+
+    #[cfg(not(windows))]
+    {
+        let _ = temp_vbs;
+        let _ = vbs_code;
     }
 }
 
@@ -67,10 +117,21 @@ fn register_installation(install_dir: &Path, target_exe: &Path, autostart: bool)
         let uninstall_subkey =
             w!("Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\ZenGamma");
         if RegCreateKeyW(HKEY_CURRENT_USER, uninstall_subkey, &mut hkey).is_ok() {
-            let exe_str = target_exe.to_string_lossy();
-            let dir_str = install_dir.to_string_lossy();
+            let exe_str = target_exe
+                .to_string_lossy()
+                .trim_start_matches(r"\\?\")
+                .to_string();
+            let dir_str = install_dir
+                .to_string_lossy()
+                .trim_start_matches(r"\\?\")
+                .to_string();
             let uninstall_bat = install_dir.join("Uninstall-ZenGamma.bat");
-            let uninst_cmd = format!("\"{}\"", uninstall_bat.to_string_lossy());
+            let uninst_cmd = format!(
+                "\"{}\"",
+                uninstall_bat
+                    .to_string_lossy()
+                    .trim_start_matches(r"\\?\")
+            );
 
             set_reg_sz(hkey, w!("DisplayName"), "ZenGamma");
             set_reg_sz(hkey, w!("DisplayVersion"), "0.2.0");
@@ -85,7 +146,11 @@ fn register_installation(install_dir: &Path, target_exe: &Path, autostart: bool)
         let run_subkey = w!("Software\\Microsoft\\Windows\\CurrentVersion\\Run");
         if RegOpenKeyExW(HKEY_CURRENT_USER, run_subkey, 0, KEY_WRITE, &mut run_key).is_ok() {
             if autostart {
-                let cmd = format!("\"{}\" --minimized", target_exe.to_string_lossy());
+                let clean_exe = target_exe
+                    .to_string_lossy()
+                    .trim_start_matches(r"\\?\")
+                    .to_string();
+                let cmd = format!("\"{}\" --minimized", clean_exe);
                 set_reg_sz(run_key, w!("ZenGamma"), &cmd);
             } else {
                 let _ = RegDeleteValueW(run_key, w!("ZenGamma"));
@@ -149,35 +214,71 @@ fn perform_installation(
          reg delete \"HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Run\" /v ZenGamma /f >nul 2>&1\r\n\
          reg delete \"HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\ZenGamma\" /f >nul 2>&1\r\n\
          del /F /Q \"%USERPROFILE%\\Desktop\\ZenGamma.lnk\" >nul 2>&1\r\n\
+         del /F /Q \"%USERPROFILE%\\Desktop\\Zen Gamma.lnk\" >nul 2>&1\r\n\
          del /F /Q \"%APPDATA%\\Microsoft\\Windows\\Start Menu\\Programs\\ZenGamma.lnk\" >nul 2>&1\r\n\
+         del /F /Q \"%APPDATA%\\Microsoft\\Windows\\Start Menu\\Programs\\Zen Gamma.lnk\" >nul 2>&1\r\n\
          cd /d \"%TEMP%\"\r\n\
          rmdir /S /Q \"{}\"\r\n",
-        install_dir.to_string_lossy()
+        install_dir.to_string_lossy().trim_start_matches(r"\\?\")
     );
     let _ = fs::write(&uninstall_bat, bat_content);
 
-    // 4. Create Desktop and Start Menu Shortcuts
+    // 4. Create Desktop Shortcuts across detected desktop roots (Standard, OneDrive, Localized)
     if desktop_shortcut {
+        let mut desktop_targets = Vec::new();
         if let Some(desktop) = dirs::desktop_dir() {
-            create_shortcut(&desktop.join("ZenGamma.lnk"), &target_exe, install_dir);
+            desktop_targets.push(desktop);
+        }
+        if let Ok(userprofile) = env::var("USERPROFILE") {
+            let direct = PathBuf::from(&userprofile).join("Desktop");
+            if !desktop_targets.contains(&direct) {
+                desktop_targets.push(direct);
+            }
+            let onedrive = PathBuf::from(&userprofile).join("OneDrive").join("Desktop");
+            if onedrive.exists() && !desktop_targets.contains(&onedrive) {
+                desktop_targets.push(onedrive);
+            }
+        }
+
+        for dt in desktop_targets {
+            create_shortcut(&dt.join("Zen Gamma.lnk"), &target_exe, install_dir);
+            create_shortcut(&dt.join("ZenGamma.lnk"), &target_exe, install_dir);
         }
     }
+
+    // 5. Create Start Menu Shortcuts
     if start_menu_shortcut {
+        let mut sm_targets = Vec::new();
         if let Some(appdata) = dirs::data_dir() {
-            let sm_dir = appdata
+            sm_targets.push(
+                appdata
+                    .join("Microsoft")
+                    .join("Windows")
+                    .join("Start Menu")
+                    .join("Programs"),
+            );
+        }
+        if let Ok(appdata_var) = env::var("APPDATA") {
+            let sm = PathBuf::from(appdata_var)
                 .join("Microsoft")
                 .join("Windows")
                 .join("Start Menu")
                 .join("Programs");
-            let _ = fs::create_dir_all(&sm_dir);
-            create_shortcut(&sm_dir.join("ZenGamma.lnk"), &target_exe, install_dir);
+            if !sm_targets.contains(&sm) {
+                sm_targets.push(sm);
+            }
+        }
+
+        for sm in sm_targets {
+            create_shortcut(&sm.join("Zen Gamma.lnk"), &target_exe, install_dir);
+            create_shortcut(&sm.join("ZenGamma.lnk"), &target_exe, install_dir);
         }
     }
 
-    // 5. Register in Windows Uninstall & Startup registry keys
+    // 6. Register in Windows Uninstall & Startup registry keys
     register_installation(install_dir, &target_exe, autostart);
 
-    // 6. Launch ZenGamma if requested
+    // 7. Launch ZenGamma if requested
     if launch_now && target_exe.exists() {
         let _ = Command::new(&target_exe).current_dir(install_dir).spawn();
     }
@@ -237,4 +338,22 @@ fn main() -> Result<(), slint::PlatformError> {
 
     slint::run_event_loop_until_quit()?;
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_create_shortcut() {
+        let temp_dir = std::env::temp_dir();
+        let lnk = temp_dir.join("test_zen_gamma.lnk");
+        let target = temp_dir.join("notepad.exe");
+        let _ = fs::write(&target, b"dummy");
+        create_shortcut(&lnk, &target, &temp_dir);
+        let exists = lnk.exists();
+        let _ = fs::remove_file(&lnk);
+        let _ = fs::remove_file(&target);
+        assert!(exists, "Shortcut .lnk should be created");
+    }
 }

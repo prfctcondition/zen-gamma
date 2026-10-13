@@ -383,11 +383,7 @@ component PresetRow inherits Rectangle {
     in property <bool> applied: false;
     in property <bool> is-dragging: false;
     in property <bool> is-drop-target: false;
-    in property <bool> can-move-up: false;
-    in property <bool> can-move-down: false;
     callback clicked();
-    callback move-up();
-    callback move-down();
     callback drag-start();
     callback drag-move(length);
     callback drag-end(length);
@@ -443,8 +439,8 @@ component PresetRow inherits Rectangle {
 
     HorizontalLayout {
         padding-left: 7px;
-        padding-right: 6px;
-        spacing: 5px;
+        padding-right: 8px;
+        spacing: 6px;
 
         // Visual Drag Grip Handle (⠿)
         Rectangle {
@@ -488,75 +484,15 @@ component PresetRow inherits Rectangle {
             border-color: Theme.border-subtle;
 
             HorizontalLayout {
-                padding-left: 5px;
-                padding-right: 5px;
+                padding-left: 6px;
+                padding-right: 6px;
                 Text {
                     text: root.hotkey;
                     color: Theme.text-muted;
-                    font-size: 9.5px;
+                    font-size: 10px;
                     font-weight: 600;
                     vertical-alignment: center;
                     horizontal-alignment: center;
-                }
-            }
-        }
-
-        // Compact Reorder Up / Down Controls
-        if root.can-move-up || root.can-move-down : VerticalLayout {
-            width: 16px;
-            height: 28px;
-            y: (parent.height - self.height) / 2;
-            spacing: 2px;
-
-            Rectangle {
-                width: 16px;
-                height: 13px;
-                border-radius: 3px;
-                background: (root.can-move-up && up-touch.has-hover) ? rgba(15, 23, 42, 0.08) : transparent;
-
-                Path {
-                    width: 8px;
-                    height: 5px;
-                    x: 4px;
-                    y: 4px;
-                    commands: "M 1 4 L 4 1 L 7 4";
-                    stroke: root.can-move-up
-                        ? (up-touch.has-hover ? Theme.accent-navy : Theme.text-muted)
-                        : #E2E8F0;
-                    stroke-width: 1.4px;
-                    fill: transparent;
-                }
-
-                up-touch := TouchArea {
-                    enabled: root.can-move-up;
-                    mouse-cursor: root.can-move-up ? pointer : default;
-                    clicked => { root.move-up(); }
-                }
-            }
-
-            Rectangle {
-                width: 16px;
-                height: 13px;
-                border-radius: 3px;
-                background: (root.can-move-down && down-touch.has-hover) ? rgba(15, 23, 42, 0.08) : transparent;
-
-                Path {
-                    width: 8px;
-                    height: 5px;
-                    x: 4px;
-                    y: 4px;
-                    commands: "M 1 1 L 4 4 L 7 1";
-                    stroke: root.can-move-down
-                        ? (down-touch.has-hover ? Theme.accent-navy : Theme.text-muted)
-                        : #E2E8F0;
-                    stroke-width: 1.4px;
-                    fill: transparent;
-                }
-
-                down-touch := TouchArea {
-                    enabled: root.can-move-down;
-                    mouse-cursor: root.can-move-down ? pointer : default;
-                    clicked => { root.move-down(); }
                 }
             }
         }
@@ -743,7 +679,6 @@ export component AppWindow inherits Window {
     callback start-record-reset-hotkey();
     callback reset-hotkey-captured(bool, bool, bool, string);
     callback save-preset();
-    callback apply-now();
     callback reset-to-default();
 
     // Invisible FocusScope used when recording a global hotkey press
@@ -1001,7 +936,7 @@ export component AppWindow inherits Window {
 
                 // LEFT SIDEBAR (#F1F5F9)
                 Rectangle {
-                    width: 274px;
+                    width: 292px;
                     background: Theme.bg-sidebar;
 
                     VerticalLayout {
@@ -1236,8 +1171,6 @@ export component AppWindow inherits Window {
                                         applied: preset.is-active;
                                         is-dragging: root.dragging-preset-index == idx;
                                         is-drop-target: root.dragging-preset-index >= 0 && root.preset-drop-target-index == idx && root.dragging-preset-index != idx;
-                                        can-move-up: idx > 0;
-                                        can-move-down: idx + 1 < root.presets.length;
                                         clicked => {
                                             root.recording-hotkey = false;
                                             root.recording-reset-hotkey = false;
@@ -1258,7 +1191,7 @@ export component AppWindow inherits Window {
                                         }
                                         drag-end(delta) => {
                                             if (abs(delta) >= 16px) {
-                                                let target = clamp(round((idx * 42px + delta) / 42px), 0, root.presets.length - 1);
+                                                 let target = clamp(round((idx * 42px + delta) / 42px), 0, root.presets.length - 1);
                                                 if (target != idx) {
                                                     root.move-preset(idx, target);
                                                 }
@@ -1266,16 +1199,6 @@ export component AppWindow inherits Window {
                                             root.dragging-preset-index = -1;
                                             root.preset-drop-target-index = -1;
                                             root.preset-drag-delta-y = 0px;
-                                        }
-                                        move-up => {
-                                            root.recording-hotkey = false;
-                                            root.recording-reset-hotkey = false;
-                                            root.move-preset(idx, idx - 1);
-                                        }
-                                        move-down => {
-                                            root.recording-hotkey = false;
-                                            root.recording-reset-hotkey = false;
-                                            root.move-preset(idx, idx + 1);
                                         }
                                     }
 
@@ -1442,32 +1365,10 @@ export component AppWindow inherits Window {
                                             }
                                         }
                                         Text {
-                                            text: root.backend-status-label + "  •  Hotkeys Active Only For Selected Game Tab";
+                                            text: root.profile-engaged ? "Hardware Calibrated Display Profile Engaged" : "Standard Factory Display Profile (1:1 Identity)";
                                             color: Theme.text-muted;
                                             font-size: 10.5px;
                                             overflow: elide;
-                                        }
-                                    }
-                                }
-
-                                // Emergency Reset Shortcut Badge
-                                Rectangle {
-                                    height: 26px;
-                                    y: (parent.height - self.height) / 2;
-                                    border-radius: 5px;
-                                    background: Theme.bg-sidebar;
-                                    border-width: 1px;
-                                    border-color: Theme.border-subtle;
-
-                                    HorizontalLayout {
-                                        padding-left: 9px;
-                                        padding-right: 9px;
-                                        Text {
-                                            text: "Emergency Reset: Ctrl+Shift+R";
-                                            color: Theme.text-secondary;
-                                            font-size: 10.5px;
-                                            font-weight: 600;
-                                            vertical-alignment: center;
                                         }
                                     }
                                 }
@@ -1497,20 +1398,6 @@ export component AppWindow inherits Window {
                                             font-size: 10px;
                                             font-weight: 700;
                                             letter-spacing: 0.7px;
-                                            vertical-alignment: center;
-                                        }
-                                        if root.current-preset-is-builtin : Text {
-                                            text: "(DEFAULT — LOCKED)";
-                                            color: Theme.accent-navy;
-                                            font-size: 9.5px;
-                                            font-weight: 700;
-                                            vertical-alignment: center;
-                                        }
-                                        if !root.current-preset-is-builtin : Text {
-                                            text: "(USER PRESET — SAVED IN user_presets.json)";
-                                            color: Theme.status-online;
-                                            font-size: 9.5px;
-                                            font-weight: 700;
                                             vertical-alignment: center;
                                         }
                                     }
@@ -1544,7 +1431,7 @@ export component AppWindow inherits Window {
                                     horizontal-stretch: 0;
 
                                     Text {
-                                        text: "GLOBAL HOTKEY (THIS GAME)";
+                                        text: "HOTKEY";
                                         color: Theme.text-muted;
                                         font-size: 10px;
                                         font-weight: 700;
@@ -1678,7 +1565,7 @@ export component AppWindow inherits Window {
 
                                     ZenSlider {
                                         horizontal-stretch: 1;
-                                        label: "Brightness (Black Level Lift)";
+                                        label: "Brightness";
                                         minimum: -50.0;
                                         maximum: 50.0;
                                         value <=> root.brightness;
@@ -1688,7 +1575,7 @@ export component AppWindow inherits Window {
 
                                     ZenSlider {
                                         horizontal-stretch: 1;
-                                        label: "Contrast (Dynamic Range)";
+                                        label: "Contrast";
                                         minimum: 0.0;
                                         maximum: 100.0;
                                         value <=> root.contrast;
@@ -1740,7 +1627,7 @@ export component AppWindow inherits Window {
                                     }
 
                                     if !root.rgb-split-enabled : ZenSlider {
-                                        label: "Master Gamma (Night Shadow Boost)";
+                                        label: "Master Gamma";
                                         minimum: 0.50;
                                         maximum: 3.00;
                                         value <=> root.gamma;
@@ -1809,16 +1696,10 @@ export component AppWindow inherits Window {
                                             vertical-alignment: center;
                                             horizontal-stretch: 1;
                                         }
-                                        Text {
-                                            text: "0% = Grayscale  •  100% = Default  •  200% = Max Vibrance";
-                                            color: Theme.text-muted;
-                                            font-size: 10.5px;
-                                            vertical-alignment: center;
-                                        }
                                     }
 
                                     ZenSlider {
-                                        label: "Saturation (DWM Color Matrix + Driver Vibrance)";
+                                        label: "Color Saturation & Digital Vibrance";
                                         minimum: 0.0;
                                         maximum: 200.0;
                                         value <=> root.saturation;
@@ -1900,15 +1781,8 @@ export component AppWindow inherits Window {
                             ActionButton {
                                 text: "Save Preset";
                                 icon-path: "M 2 2 L 10 2 L 12 4 L 12 12 L 2 12 Z M 4 2 L 4 6 L 9 6 L 9 2";
-                                primary: false;
-                                clicked => { root.save-preset(); }
-                            }
-
-                            ActionButton {
-                                text: "Apply Now";
-                                icon-path: "M 2 7 L 5 10 L 12 3";
                                 primary: true;
-                                clicked => { root.apply-now(); }
+                                clicked => { root.save-preset(); }
                             }
                         }
                     }
@@ -2540,7 +2414,7 @@ export component InstallerWindow inherits Window {
     in-out property <string> install-dir: "C:\\Users\\Public\\ZenGamma";
     in-out property <bool> opt-desktop-shortcut: true;
     in-out property <bool> opt-start-menu: true;
-    in-out property <bool> opt-autostart: false;
+    in-out property <bool> opt-autostart: true;
     in-out property <bool> opt-launch-now: true;
     in-out property <string> status-text: "Ready to install ZenGamma v0.2 and 139 offline game icons.";
     in-out property <bool> install-finished: false;

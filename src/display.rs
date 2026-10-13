@@ -481,13 +481,9 @@ pub fn read_hardware_ramp() -> GammaRamp {
     GammaRamp::default()
 }
 
-/// Immediately restores the original hardware gamma ramp.
+/// Immediately restores the display to the true calibrated hardware identity ramp.
 pub fn emergency_restore_display() {
-    if let Some(lock) = EMERGENCY_RESTORE_RAMP.get() {
-        if let Ok(original_ramp) = lock.lock() {
-            let _ = apply_hardware_ramp(&original_ramp);
-        }
-    }
+    let _ = apply_hardware_ramp(&GammaRamp::default());
 }
 
 /// Installs global panic and console termination hooks to guarantee clean gamma restoration.
@@ -533,7 +529,6 @@ unsafe impl Send for NvApiDvcDriver {}
 unsafe impl Send for AmdAdlDriver {}
 
 pub struct DisplayController {
-    original_ramp: GammaRamp,
     backend_kind: VibranceBackend,
     worker_state: std::sync::Arc<(Mutex<WorkerSlot>, std::sync::Condvar)>,
 }
@@ -541,8 +536,7 @@ pub struct DisplayController {
 impl DisplayController {
     pub fn new() -> Self {
         cleanup_legacy_magnification();
-        let original_ramp = read_hardware_ramp();
-        install_panic_and_exit_hooks(original_ramp);
+        install_panic_and_exit_hooks(read_hardware_ramp());
 
         let nvapi_driver = NvApiDvcDriver::try_init();
         let amd_driver = if nvapi_driver.is_none() {
@@ -602,7 +596,7 @@ impl DisplayController {
                             }
                         }
                         WorkerJob::Reset => {
-                            let _ = apply_hardware_ramp(&original_ramp);
+                            let _ = apply_hardware_ramp(&GammaRamp::default());
                             if (last_saturation - 100.0).abs() > 0.05 {
                                 last_saturation = 100.0;
                                 if let Some(ref nvapi) = nvapi_driver {
@@ -614,7 +608,7 @@ impl DisplayController {
                             }
                         }
                         WorkerJob::Shutdown => {
-                            let _ = apply_hardware_ramp(&original_ramp);
+                            let _ = apply_hardware_ramp(&GammaRamp::default());
                             if let Some(ref nvapi) = nvapi_driver {
                                 nvapi.restore_default();
                             }
@@ -629,7 +623,6 @@ impl DisplayController {
             .expect("Failed to spawn display worker thread");
 
         Self {
-            original_ramp,
             backend_kind,
             worker_state,
         }
@@ -649,14 +642,14 @@ impl DisplayController {
         Ok(())
     }
 
-    /// Restores the display to the exact hardware ramp and neutral saturation captured at startup.
+    /// Restores the display to the true calibrated hardware identity ramp and neutral saturation.
     pub fn reset_to_default(&self) -> Result<(), String> {
         let (lock, cvar) = &*self.worker_state;
         if let Ok(mut slot) = lock.lock() {
             slot.pending = Some(WorkerJob::Reset);
             cvar.notify_one();
         }
-        let _ = apply_hardware_ramp(&self.original_ramp);
+        let _ = apply_hardware_ramp(&GammaRamp::default());
         Ok(())
     }
 }
